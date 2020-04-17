@@ -42,12 +42,12 @@ jobs:
         with:
           use-cross: ${{ matrix.config.cross }}
           command: rustc
-          args: --release --target ${{ matrix.config.target }} -p jormungandrwallet -- -C lto
+          args: --release --target ${{ matrix.config.target }} -p ${{ matrix.config.target }}_jormungandrwallet -- -C lto
 
       - uses: actions/upload-artifact@v1
         with:
-          name: iohk_wallet/${{ matrix.config.target }}
-          path: ./target/${{ matrix.config.target }}/release/libjormungandrwallet.a
+          name: iohk_wallet
+          path: ./target/${{ matrix.config.target }}/release/${{ matrix.config.target }}_libjormungandrwallet.a
 
   testing:
     name: Lint Check and Testing
@@ -73,7 +73,7 @@ jobs:
         run: |
           LIST="aarch64-linux-android arm-linux-androideabi armv7-linux-androideabi i686-linux-android x86_64-linux-android"
           for target in $LIST; do
-              LIB=iohk_wallet/${target}/libjormungandrwallet.a
+              LIB=iohk_wallet/${target}/${target}_libjormungandrwallet.a
               DES=wallet-android/app/src/main/cpp/vendors/${target}/lib/libjormungandrwallet.a
               cp $LIB $DES
           done
