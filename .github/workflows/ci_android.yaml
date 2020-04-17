@@ -19,11 +19,16 @@ jobs:
           java-version: 1.8
 
       # Step 3: Check the code with Android linter
-      - name: Run Android Linte
+      - name: Run Android Lint
         working-directory: ./wallet-android
         run: ./gradlew lint
 
-      # Step 4: Run your unit tests
+      # Step 4: Check the code with Android linter
+      - name: Run Android build
+        working-directory: ./wallet-android
+        run: ./gradlew build
+
+      # Step 5: Run your unit tests
       - name: Run Unit Tests
         working-directory: ./wallet-android
         run:  ./gradlew test
