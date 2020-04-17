@@ -4,31 +4,76 @@ name: Android tests
 on: [push, pull_request]
 
 jobs:
-  testing:
-    name: Lint Check and Testing
+  jobs:
+    build_assets:
+      name: Check ${{ matrix.config.os }}
+      runs-on: ${{ matrix.config.os }}
+      strategy:
+        fail-fast: false
+        matrix:
+          config:
+            # Android
+            - { os: ubuntu-latest, cross: true, toolchain: stable, target: aarch64-linux-android }
+            - { os: ubuntu-latest, cross: true, toolchain: stable, target: arm-linux-androideabi }
+            - { os: ubuntu-latest, cross: true, toolchain: stable, target: armv7-linux-androideabi }
+            - { os: ubuntu-latest, cross: true, toolchain: stable, target: i686-linux-android }
+            - { os: ubuntu-latest, cross: true, toolchain: stable, target: x86_64-linux-android }
+      steps:
+        - uses: actions-rs/toolchain@v1
+          with:
+            toolchain: ${{ matrix.config.toolchain }}
+            target: ${{ matrix.config.target }}
+            override: true
+            default: true
 
-    runs-on: ubuntu-latest
+        - name: Downgrade cross
+          uses: actions-rs/cargo@v1
+          if: ${{ matrix.config.cross }}
+          with:
+            command: install
+            args: --version 0.1.16 cross
 
-    steps:
-      - name: Clone Repo
-        uses: actions/checkout@v1
+        - name: Checkout code
+          uses: actions/checkout@v1
+          with:
+            submodules: true
 
-      - name: Set up JDK 1.8
-        uses: actions/setup-java@v1
-        with:
-          java-version: 1.8
+        - name: Build library (release)
+          uses: actions-rs/cargo@v1
+          with:
+            use-cross: ${{ matrix.config.cross }}
+            command: rustc
+            args: --release --target ${{ matrix.config.target }} -p jormungandrwallet -- -C lto
 
-      # Step 3: Check the code with Android linter
-      - name: Run Android Lint
-        working-directory: ./wallet-android
-        run: ./gradlew lint
+        - name: copy binary
+          if: matrix.config.os != 'windows-latest'
+          run: find ./target/${{ matrix.config.target }}/release -maxdepth 1 '(' -name "libjormungandrwallet.so" -o -name "libjormungandrwallet.a" ')' -exec cp {} ./wallet-android/app/src/main/cpp/vendors/${{ matrix.config.target }}/iohk_wallet/lib \;
 
-      # Step 4: Check the code with Android linter
-      - name: Run Android build
-        working-directory: ./wallet-android
-        run: ./gradlew build
+    testing:
+      name: Lint Check and Testing
 
-      # Step 5: Run your unit tests
-      - name: Run Unit Tests
-        working-directory: ./wallet-android
-        run:  ./gradlew test
+      runs-on: ubuntu-latest
+
+      steps:
+        - name: Clone Repo
+          uses: actions/checkout@v1
+
+        - name: Set up JDK 1.8
+          uses: actions/setup-java@v1
+          with:
+            java-version: 1.8
+
+        # Step 3: Check the code with Android linter
+        - name: Run Android Lint
+          working-directory: ./wallet-android
+          run: ./gradlew lint
+
+        # Step 4: Check the code with Android linter
+        - name: Run Android build
+          working-directory: ./wallet-android
+          run: ./gradlew build
+
+        # Step 5: Run your unit tests
+        - name: Run Unit Tests
+          working-directory: ./wallet-android
+          run:  ./gradlew test
