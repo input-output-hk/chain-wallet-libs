@@ -44,13 +44,14 @@ jobs:
           command: rustc
           args: --release --target ${{ matrix.config.target }} -p jormungandrwallet -- -C lto
 
-      - name: copy binary
-        if: matrix.config.os != 'windows-latest'
-        run: find ./target/${{ matrix.config.target }}/release -maxdepth 1 '(' -name "libjormungandrwallet.so" -o -name "libjormungandrwallet.a" ')' -exec cp {} ./wallet-android/app/src/main/cpp/vendors/${{ matrix.config.target }}/iohk_wallet/lib \;
+      - uses: actions/upload-artifact@v1
+        with:
+          name: iohk_wallet/${{ matrix.config.target }}
+          path: ./target/${{ matrix.config.target }}/release/libjormungandrwallet.a
 
   testing:
     name: Lint Check and Testing
-
+    needs: build_assets
     runs-on: ubuntu-latest
 
     steps:
@@ -61,6 +62,21 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 1.8
+
+      - name: Download builded libs
+          uses: actions/download-artifact@v1
+          with:
+            name: iohk_wallet
+
+      - name: Copy assets
+        shell: bash
+        run: |
+          LIST="aarch64-linux-android arm-linux-androideabi armv7-linux-androideabi i686-linux-android x86_64-linux-android"
+          for target in $LIST; do
+              LIB=iohk_wallet/${target}/libjormungandrwallet.a
+              DES=wallet-android/app/src/main/cpp/vendors/${target}/lib/libjormungandrwallet.a
+              cp $LIB $DES
+          done
 
       # Step 3: Check the code with Android linter
       - name: Run Android Lint
