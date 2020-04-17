@@ -1,14 +1,7 @@
-name: Testing Workflow
+name: Android tests
 
 # Step 1: Choose the branch or branches you want to run this workflow
-on:
-  pull_request:
-    branches:
-      - master
-  push:
-    branches:
-      = master
-      - gh_actions_test
+on: [push, pull_request]
 
 jobs:
   testing:
