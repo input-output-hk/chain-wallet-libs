@@ -77,7 +77,7 @@ jobs:
 
       - name: Copy assets
         shell: bash
-        run: cp io_hk_wallet/* wallet-android/app/src/main/cpp/vendors/
+        run: cp iohk_wallet/* wallet-android/app/src/main/cpp/vendors/
 
       # Step 3: Check the code with Android linter
       - name: Run Android Lint
