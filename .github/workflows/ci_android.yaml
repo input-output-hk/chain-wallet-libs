@@ -5,7 +5,7 @@ on: [push, pull_request]
 
 jobs:
   build_assets:
-    name: Check ${{ matrix.config.os }}
+    name: Build android lib
     runs-on: ${{ matrix.config.os }}
     strategy:
       fail-fast: false
@@ -47,7 +47,7 @@ jobs:
       - name: prepare package
         run: mkdir -p dist/${{ matrix.config.target }}/iohk_wallet/lib
 
-      - name: copy binary if unix
+      - name: copy binary
         if: matrix.config.os != 'windows-latest'
         run: find ./target/${{ matrix.config.target }}/release -maxdepth 1 '(' -name "libjormungandrwallet.so" -o -name "libjormungandrwallet.a" ')' -exec cp {} dist/${{ matrix.config.target }}/iohk_wallet/lib \;
 
@@ -77,13 +77,7 @@ jobs:
 
       - name: Copy assets
         shell: bash
-        run: |
-          LIST="aarch64-linux-android arm-linux-androideabi armv7-linux-androideabi i686-linux-android x86_64-linux-android"
-          for target in $LIST; do
-              LIB=iohk_wallet/${target}/iohk_wallet/lib/libjormungandrwallet.a
-              DES=wallet-android/app/src/main/cpp/vendors/${target}/iohk_wallet/lib/libjormungandrwallet.a
-              cp $LIB $DES
-          done
+        run: cp io_hk_wallet/* wallet-android/app/src/main/cpp/vendors/
 
       # Step 3: Check the code with Android linter
       - name: Run Android Lint
