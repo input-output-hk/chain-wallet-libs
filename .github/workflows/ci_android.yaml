@@ -88,8 +88,12 @@ jobs:
       - name: Run Android build
         working-directory: ./wallet-android
         run: ./gradlew build
+        env:
+          GH_ACTIONS_BUILD: "1"
 
       # Step 5: Run your unit tests
       - name: Run Unit Tests
         working-directory: ./wallet-android
         run:  ./gradlew test
+        env:
+          GH_ACTIONS_BUILD: "1"
