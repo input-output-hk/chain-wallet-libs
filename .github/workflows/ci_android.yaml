@@ -37,17 +37,24 @@ jobs:
         with:
           submodules: true
 
-      - name: Build library (release)
+      - name: Build ${{ matrix.config.target }} library
         uses: actions-rs/cargo@v1
         with:
           use-cross: ${{ matrix.config.cross }}
           command: rustc
-          args: --release --target ${{ matrix.config.target }} -p jormungandrwallet -- -o ${{ matrix.config.target }}_jormungandrwallet -C lto
+          args: --release --target ${{ matrix.config.target }} -p jormungandrwallet -- -C lto
+
+      - name: prepare package
+        run: mkdir -p dist/${{ matrix.config.target }}/iohk_wallet/lib
+
+      - name: copy binary if unix
+        if: matrix.config.os != 'windows-latest'
+        run: find ./target/${{ matrix.config.target }}/release -maxdepth 1 '(' -name "libjormungandrwallet.so" -o -name "libjormungandrwallet.a" ')' -exec cp {} dist/${{ matrix.config.target }}/iohk_wallet/lib \;
 
       - uses: actions/upload-artifact@v1
         with:
           name: iohk_wallet
-          path: ./target/${{ matrix.config.target }}/release/${{ matrix.config.target }}_libjormungandrwallet.a
+          path: ./dist
 
   testing:
     name: Lint Check and Testing
@@ -73,8 +80,8 @@ jobs:
         run: |
           LIST="aarch64-linux-android arm-linux-androideabi armv7-linux-androideabi i686-linux-android x86_64-linux-android"
           for target in $LIST; do
-              LIB=iohk_wallet/${target}/${target}_libjormungandrwallet.a
-              DES=wallet-android/app/src/main/cpp/vendors/${target}/lib/libjormungandrwallet.a
+              LIB=iohk_wallet/${target}/iohk_wallet/lib/libjormungandrwallet.a
+              DES=wallet-android/app/src/main/cpp/vendors/${target}/iohk_wallet/lib/libjormungandrwallet.a
               cp $LIB $DES
           done
 
