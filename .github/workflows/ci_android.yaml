@@ -42,7 +42,7 @@ jobs:
         with:
           use-cross: ${{ matrix.config.cross }}
           command: rustc
-          args: --release --target ${{ matrix.config.target }} -p jormungandrwallet -o ${{ matrix.config.target }}_jormungandrwallet -- -C lto
+          args: --release --target ${{ matrix.config.target }} -p jormungandrwallet -- -o ${{ matrix.config.target }}_jormungandrwallet -C lto
 
       - uses: actions/upload-artifact@v1
         with:
