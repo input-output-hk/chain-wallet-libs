@@ -56,7 +56,7 @@ jobs:
 
   package_android_module:
     runs-on: ubuntu-latest
-    needs: release_assets
+    needs: build_assets
 
     steps:
       - name: Checkout code
