@@ -70,7 +70,7 @@ jobs:
           name: jniLibs
 
       - name: Copy libs
-        run: cp jniLibs wallet-android/src/main/
+        run: cp -r jniLibs wallet-android/src/main/
 
       - name: Rename jni folders
         working-directory: ./wallet-android/src/main/jniLibs
