@@ -68,3 +68,18 @@ jobs:
           uses: actions/download-artifact@v1
           with:
             name: jniLibs
+
+      - name: Copy libs
+        run: cp jniLibs wallet-android/src/main/
+
+      - name: Rename jni folders
+        working-directory: ./wallet-android/src/main/jniLibs
+        run: python rename_targets.py
+
+      - name: Compress module
+        run: tar -czvf jormungandrwallet.gz wallet-android/*
+
+      - uses: actions/upload-artifact@v1
+        with:
+          name: android_jormungandrwallet
+          path: ./jormungandrwallet.gz
