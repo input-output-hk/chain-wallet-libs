@@ -8,7 +8,7 @@ targets = {
 
 if __name__ == "__main__":
     import sys
-    from shutil import move
+    from shutil import move, rmtree
     from os import path
     import os
     libname = "libwallet_jni.so"
@@ -16,3 +16,4 @@ if __name__ == "__main__":
         if not path.exists(f"./{target}"):
             os.makedirs(f"./{target}")
         move(f"./{original}/{libname}", f"./{target}/{libname}")
+        rmtree(f"./{original}")
