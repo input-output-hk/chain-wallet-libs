@@ -60,14 +60,14 @@ jobs:
 
     steps:
       - name: Checkout code
-          uses: actions/checkout@v1
-          with:
-            submodules: true
+        uses: actions/checkout@v1
+        with:
+          submodules: true
 
       - name: Download builded libs
-          uses: actions/download-artifact@v1
-          with:
-            name: jniLibs
+        uses: actions/download-artifact@v1
+        with:
+          name: jniLibs
 
       - name: Copy libs
         run: cp jniLibs wallet-android/src/main/
