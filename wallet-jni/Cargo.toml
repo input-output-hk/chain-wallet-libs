@@ -1,0 +1,13 @@
+[package]
+name = "wallet-jni"
+version = "0.1.0"
+authors = ["Daniel Sanchez Quiros <daniel.sanchez@iohk.io>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = [ "staticlib", "cdylib" ]
+
+[dependencies]
+jni = "0.16.0"
+jormungandrwallet = { path = "../wallet-c" }
