@@ -74,7 +74,9 @@ jobs:
 
       - name: Rename jni folders
         working-directory: ./wallet-android/src/main/jniLibs
-        run: python3 rename_targets.py
+        run: |
+          pwd
+          python3 rename_targets.py
 
       - name: Compress module
         run: tar -czvf jormungandrwallet.gz wallet-android/*
