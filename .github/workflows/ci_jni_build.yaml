@@ -48,7 +48,7 @@ jobs:
         run: mkdir -p jniLibs/${{ matrix.config.target }}
 
       - name: copy binary
-        run: cp ./target/${{ matrix.config.target }}/release/wallet_jni.so ./jniLibs/${{ matrix.config.target }}/;
+        run: cp ./target/${{ matrix.config.target }}/release/libwallet_jni.so ./jniLibs/${{ matrix.config.target }}/;
 
       - uses: actions/upload-artifact@v1
         with:
