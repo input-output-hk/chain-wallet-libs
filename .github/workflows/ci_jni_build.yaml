@@ -49,7 +49,7 @@ jobs:
 
       - name: copy binary
         if: matrix.config.os != 'windows-latest'
-        run: find ./target/${{ matrix.config.target }}/release -maxdepth 1 '(' -name "wallet-jni.so" -o -name "wallet-jni.a" ')' -exec cp {} jniLibs/${{ matrix.config.target }}
+        run: find ./target/${{ matrix.config.target }}/release -maxdepth 1 '(' -name "wallet_jni.so" -o -name "wallet_jni.a" ')' -exec cp {} jniLibs/${{ matrix.config.target }}
 
       - uses: actions/upload-artifact@v1
         with:
