@@ -1,6 +1,6 @@
 on: [push, pull_request]
 
-name: C.I. JNI Android Build
+name: C.I. JNI Android Build and Package
 
 jobs:
   build_assets:
