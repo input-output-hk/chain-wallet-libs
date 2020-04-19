@@ -6,7 +6,10 @@ edition = "2018"
 license = "MIT OR Apache-2.0"
 
 [lib]
-crate-type = ["lib", "staticlib", "cdylib"]
+crate-type = ["lib"]
+
+[build]
+crate-type = ["staticlib", "cdylib"]
 
 [dependencies]
 bip39 = { path = "../bip39" }

@@ -234,14 +234,14 @@ jobs:
         run: python3 ./rename_targets.py
 
       - name: Compress module
-        run: tar -czvf jormungandrwallet.gz wallet-android/*
+        run: tar -czvf chain-wallet-libs-android-${{ steps.get_version.outputs.VERSION }}.gz wallet-android/*
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v1-release
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: jormungandrwallet.gz
-          asset_name: jormungandrwallet-android-${{ steps.get_version.outputs.VERSION }}
+          file: chain-wallet-libs-android-${{ steps.get_version.outputs.VERSION }}.gz
+          asset_name: chain-wallet-libs-android-${{ steps.get_version.outputs.VERSION }}
           tag: ${{ github.ref }}
           file_glob: true
           overwrite: true
