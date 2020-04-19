@@ -56,9 +56,8 @@ pub extern "system" fn Java_com_iohk_jormungandrwallet_Wallet_totalValue(
 ) -> jint {
     let wallet_ptr: WalletPtr = wallet as WalletPtr;
     let mut value: u64 = 0;
-    let value_ptr: *mut u64 = &mut value;
     if wallet_ptr != null_mut() {
-        iohk_jormungandr_wallet_total_value(wallet_ptr, value_ptr);
+        iohk_jormungandr_wallet_total_value(wallet_ptr, &mut value);
     }
     value as jint
 }
