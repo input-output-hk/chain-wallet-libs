@@ -12,7 +12,9 @@ pub extern "system" fn Java_com_iohk_jormungandrwallet_Wallet_recover(
     _: JClass,
     mnemonics: JString,
 ) -> jlong {
-    let mnemonics_j = env.get_string(mnemonics).expect("Couldn't get mnemonics String");
+    let mnemonics_j = env
+        .get_string(mnemonics)
+        .expect("Couldn't get mnemonics String");
 
     let mut wallet: WalletPtr = null_mut();
     let walletptr: *mut *mut Wallet = &mut wallet;
@@ -72,7 +74,9 @@ pub extern "system" fn Java_com_iohk_jormungandrwallet_Wallet_initialFunds(
     let wallet_ptr: WalletPtr = wallet as WalletPtr;
     let mut settings: SettingsPtr = null_mut();
     let settings_ptr: *mut SettingsPtr = &mut settings;
-    let len = env.get_array_length(block0).expect("Couldn't get block0 array length") as usize;
+    let len = env
+        .get_array_length(block0)
+        .expect("Couldn't get block0 array length") as usize;
     let mut bytes = Vec::with_capacity(len as usize);
     env.get_byte_array_region(block0, 0, &mut bytes);
     if wallet_ptr != null_mut() {
