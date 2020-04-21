@@ -17,7 +17,7 @@ class Wallet {
     @Throws(java.lang.Exception::class)
     constructor(mnemonics: String) {
         this.walletPtr = recover(mnemonics)
-        if(this.walletPtr != 0.toLong()) {
+        if(this.walletPtr == 0.toLong()) {
             throw java.lang.Exception("Error initializing wallet")
         }
     }
