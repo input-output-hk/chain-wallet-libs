@@ -136,10 +136,10 @@ jobs:
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: build
-        run: wasm-pack build --release --target ${{ matrix.target }} wallet-js
+        run: wasm-pack build --release --target ${{ matrix.target }} bindings/wallet-js
 
       - name: pack
-        run: wasm-pack pack ./wallet-js
+        run: wasm-pack pack .bindings/wallet-js
 
       - name: Get tag version
         id: get_version
