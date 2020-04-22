@@ -87,7 +87,7 @@ jobs:
         run: mkdir -p dist/iohk_wallet/lib && mkdir -p dist/iohk_wallet/include
 
       - name: copy header file
-        run: cp ./wallet-c/wallet.h dist/iohk_wallet/include/wallet.h
+        run: cp ./bindings/wallet-c/wallet.h dist/iohk_wallet/include/wallet.h
 
       - name: copy binary if unix
         if: matrix.config.os != 'windows-latest'
@@ -227,14 +227,14 @@ jobs:
           name: jniLibs
 
       - name: Copy libs
-        run: cp -r jniLibs wallet-android/src/main/
+        run: cp -r jniLibs bindings/wallet-android/src/main/
 
       - name: Rename jni folders
-        working-directory: ./wallet-android/src/main/jniLibs
+        working-directory: ./bindings/wallet-android/src/main/jniLibs
         run: python3 ./rename_targets.py
 
       - name: Compress module
-        run: tar -czvf chain-wallet-libs-android-${{ steps.get_version.outputs.VERSION }}.gz wallet-android/*
+        run: tar -czvf chain-wallet-libs-android-${{ steps.get_version.outputs.VERSION }}.gz ./bindings/wallet-android/*
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v1-release

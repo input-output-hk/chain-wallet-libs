@@ -8,7 +8,7 @@ use wasm_bindgen_test::*;
 
 wasm_bindgen_test_configure!(run_in_browser);
 
-const BLOCK0: &[u8] = include_bytes!("../../test-vectors/block0");
+const BLOCK0: &[u8] = include_bytes!("../../../test-vectors/block0");
 const WALLET_VALUE: u64 = 1000000 + 10000 + 10000 + 1 + 100;
 
 /// test to recover a yoroi style address in the test-vectors block0

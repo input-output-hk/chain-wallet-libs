@@ -2,9 +2,9 @@ use jni;
 use jni::objects::{JClass, JString};
 use jni::sys::{jbyte, jbyteArray, jint, jlong};
 use jni::JNIEnv;
-use jormungandrwallet::*;
 use std::ptr::{null, null_mut};
 use std::{ffi::CStr, os::raw::c_char};
+use wallet_core::*;
 
 #[no_mangle]
 pub extern "system" fn Java_com_iohk_jormungandrwallet_Wallet_recover(
@@ -18,7 +18,7 @@ pub extern "system" fn Java_com_iohk_jormungandrwallet_Wallet_recover(
 
     let mut wallet: WalletPtr = null_mut();
     let walletptr: *mut *mut Wallet = &mut wallet;
-    let result = iohk_jormungandr_wallet_recover(mnemonics_j.as_ptr(), null(), 0, walletptr);
+    let result = wallet_recover(&mnemonics_j.to_string_lossy(), null(), 0, walletptr);
     env.release_string_utf_chars(mnemonics, mnemonics_j.as_ptr());
     return match result {
         RecoveringResult::Success => wallet as jlong,
@@ -34,7 +34,7 @@ pub extern "system" fn Java_com_iohk_jormungandrwallet_Wallet_delete(
 ) {
     let wallet_ptr: WalletPtr = wallet as WalletPtr;
     if wallet_ptr != null_mut() {
-        iohk_jormungandr_wallet_delete_wallet(wallet_ptr);
+        wallet_delete_wallet(wallet_ptr);
     }
 }
 
@@ -46,7 +46,7 @@ pub extern "system" fn Java_com_iohk_jormungandrwallet_Settings_delete(
 ) {
     let settings_ptr: SettingsPtr = settings as SettingsPtr;
     if settings_ptr != null_mut() {
-        iohk_jormungandr_wallet_delete_settings(settings_ptr);
+        wallet_delete_settings(settings_ptr);
     }
 }
 
@@ -59,7 +59,7 @@ pub extern "system" fn Java_com_iohk_jormungandrwallet_Wallet_totalValue(
     let wallet_ptr: WalletPtr = wallet as WalletPtr;
     let mut value: u64 = 0;
     if wallet_ptr != null_mut() {
-        iohk_jormungandr_wallet_total_value(wallet_ptr, &mut value);
+        wallet_total_value(wallet_ptr, &mut value);
     }
     value as jint
 }
@@ -80,12 +80,7 @@ pub extern "system" fn Java_com_iohk_jormungandrwallet_Wallet_initialFunds(
     let mut bytes = Vec::with_capacity(len as usize);
     env.get_byte_array_region(block0, 0, &mut bytes);
     if wallet_ptr != null_mut() {
-        iohk_jormungandr_wallet_retrieve_funds(
-            wallet_ptr,
-            bytes.as_ptr() as *const u8,
-            len,
-            settings_ptr,
-        );
+        wallet_retrieve_funds(wallet_ptr, bytes.as_ptr() as *const u8, len, settings_ptr);
     }
     settings as jlong
 }

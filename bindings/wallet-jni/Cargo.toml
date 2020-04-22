@@ -11,4 +11,4 @@ crate-type = [ "cdylib" ]
 
 [dependencies]
 jni = "0.16.0"
-jormungandrwallet = { path = "../wallet-c" }
+wallet-core = { path = "../wallet-core" }

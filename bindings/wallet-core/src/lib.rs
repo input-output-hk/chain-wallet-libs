@@ -4,7 +4,6 @@ use chain_impl_mockchain::{
     value::Value,
 };
 use chain_ser::mempack::{ReadBuf, Readable as _};
-use std::{ffi::CStr, os::raw::c_char};
 
 /// the wallet
 ///
@@ -82,9 +81,8 @@ pub enum RecoveringResult {
 /// * the mnemonics are not valid (invalid length or checksum);
 /// * the `wallet_out` is null pointer
 ///
-#[no_mangle]
-pub extern "C" fn iohk_jormungandr_wallet_recover(
-    mnemonics: *const c_char,
+pub fn wallet_recover(
+    mnemonics: &str,
     password: *const u8,
     password_length: usize,
     wallet_out: *mut WalletPtr,
@@ -94,9 +92,6 @@ pub extern "C" fn iohk_jormungandr_wallet_recover(
     } else {
         return RecoveringResult::PtrIsNull;
     };
-    let mnemonics = unsafe { CStr::from_ptr(mnemonics) };
-
-    let mnemonics = mnemonics.to_string_lossy();
 
     let builder = wallet::RecoveryBuilder::new();
 
@@ -160,8 +155,8 @@ pub extern "C" fn iohk_jormungandr_wallet_recover(
 /// * this function may fail if the wallet pointer is null;
 /// * the block is not valid (cannot be decoded)
 ///
-#[no_mangle]
-pub extern "C" fn iohk_jormungandr_wallet_retrieve_funds(
+
+pub fn wallet_retrieve_funds(
     wallet: WalletPtr,
     block0: *const u8,
     block0_length: usize,
@@ -206,8 +201,7 @@ pub extern "C" fn iohk_jormungandr_wallet_retrieve_funds(
 /// Don't forget to call `iohk_jormungandr_wallet_delete_conversion` to
 /// properly free the memory
 ///
-#[no_mangle]
-pub extern "C" fn iohk_jormungandr_wallet_convert(
+pub fn wallet_convert(
     wallet: WalletPtr,
     settings: SettingsPtr,
     conversion_out: *mut ConversionPtr,
@@ -252,10 +246,7 @@ pub extern "C" fn iohk_jormungandr_wallet_convert(
 }
 
 /// get the number of transactions built to convert the retrieved wallet
-#[no_mangle]
-pub extern "C" fn iohk_jormungandr_wallet_convert_transactions_size(
-    conversion: ConversionPtr,
-) -> usize {
+pub fn wallet_convert_transactions_size(conversion: ConversionPtr) -> usize {
     unsafe {
         conversion
             .as_ref()
@@ -270,8 +261,7 @@ pub extern "C" fn iohk_jormungandr_wallet_convert_transactions_size(
 ///
 /// the memory allocated returned is not owned and should not be kept
 /// for longer than potential call to `iohk_jormungandr_wallet_delete_conversion`
-#[no_mangle]
-pub extern "C" fn iohk_jormungandr_wallet_convert_transactions_get(
+pub fn wallet_convert_transactions_get(
     conversion: ConversionPtr,
     index: usize,
     transaction_out: *mut *const u8,
@@ -310,8 +300,7 @@ pub extern "C" fn iohk_jormungandr_wallet_convert_transactions_get(
 /// these returned values are informational only and this show that
 /// there are UTxOs entries that are unusable because of the way they
 /// are populated with dusts.
-#[no_mangle]
-pub extern "C" fn iohk_jormungandr_wallet_convert_ignored(
+pub fn wallet_convert_ignored(
     conversion: ConversionPtr,
     value_out: *mut u64,
     ignored_out: *mut usize,
@@ -350,11 +339,7 @@ pub extern "C" fn iohk_jormungandr_wallet_convert_ignored(
 /// * this function may fail if the wallet pointer is null;
 ///
 /// If the `total_out` pointer is null, this function does nothing
-#[no_mangle]
-pub extern "C" fn iohk_jormungandr_wallet_total_value(
-    wallet: WalletPtr,
-    total_out: *mut u64,
-) -> RecoveringResult {
+pub fn wallet_total_value(wallet: WalletPtr, total_out: *mut u64) -> RecoveringResult {
     let wallet = if let Some(wallet) = unsafe { wallet.as_ref() } {
         wallet
     } else {
@@ -406,8 +391,7 @@ pub extern "C" fn iohk_jormungandr_wallet_set_state(
 }
 
 /// delete the pointer and free the allocated memory
-#[no_mangle]
-pub extern "C" fn iohk_jormungandr_wallet_delete_settings(settings: SettingsPtr) {
+pub fn wallet_delete_settings(settings: SettingsPtr) {
     if !settings.is_null() {
         let boxed = unsafe { Box::from_raw(settings) };
 
@@ -416,8 +400,7 @@ pub extern "C" fn iohk_jormungandr_wallet_delete_settings(settings: SettingsPtr)
 }
 
 /// delete the pointer, zero all the keys and free the allocated memory
-#[no_mangle]
-pub extern "C" fn iohk_jormungandr_wallet_delete_wallet(wallet: WalletPtr) {
+pub fn wallet_delete_wallet(wallet: WalletPtr) {
     if !wallet.is_null() {
         let boxed = unsafe { Box::from_raw(wallet) };
 
@@ -426,8 +409,7 @@ pub extern "C" fn iohk_jormungandr_wallet_delete_wallet(wallet: WalletPtr) {
 }
 
 /// delete the pointer
-#[no_mangle]
-pub extern "C" fn iohk_jormungandr_wallet_delete_conversion(conversion: ConversionPtr) {
+pub fn wallet_delete_conversion(conversion: ConversionPtr) {
     if !conversion.is_null() {
         let boxed = unsafe { Box::from_raw(conversion) };
 

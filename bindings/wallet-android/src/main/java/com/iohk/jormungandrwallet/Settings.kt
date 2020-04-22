@@ -17,5 +17,4 @@ class Settings {
     protected fun finalize() {
         delete(this.settings_prt)
     }
-
 }
