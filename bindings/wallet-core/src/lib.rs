@@ -372,8 +372,7 @@ pub fn wallet_total_value(wallet: WalletPtr, total_out: *mut u64) -> RecoveringR
 ///
 /// * this function may fail if the wallet pointer is null;
 ///
-#[no_mangle]
-pub extern "C" fn iohk_jormungandr_wallet_set_state(
+pub fn wallet_set_state(
     wallet: WalletPtr,
     value: u64,
     counter: u32,
