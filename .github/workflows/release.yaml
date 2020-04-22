@@ -147,7 +147,7 @@ jobs:
         shell: bash
 
       - name: rename-tarball
-        run: find ./wallet-js/pkg -name wallet-js*.tgz -exec mv {} chain-wallet-libs-${{ steps.get_version.outputs.VERSION }}-${{ matrix.target }}.tgz \;
+        run: find ./bindings/wallet-js/pkg -name wallet-js*.tgz -exec mv {} chain-wallet-libs-${{ steps.get_version.outputs.VERSION }}-${{ matrix.target }}.tgz \;
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v1-release
