@@ -372,11 +372,7 @@ pub fn wallet_total_value(wallet: WalletPtr, total_out: *mut u64) -> RecoveringR
 ///
 /// * this function may fail if the wallet pointer is null;
 ///
-pub fn wallet_set_state(
-    wallet: WalletPtr,
-    value: u64,
-    counter: u32,
-) -> RecoveringResult {
+pub fn wallet_set_state(wallet: WalletPtr, value: u64, counter: u32) -> RecoveringResult {
     let wallet = if let Some(wallet) = unsafe { wallet.as_mut() } {
         wallet
     } else {
