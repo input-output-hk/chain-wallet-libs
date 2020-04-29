@@ -1,4 +1,5 @@
 use chain_addr::Discrimination;
+use chain_impl_mockchain::vote::CommitteeId;
 use chain_impl_mockchain::{
     block::Block,
     fee::FeeAlgorithm as _,
@@ -52,5 +53,9 @@ impl Settings {
 
     pub fn time_era(&self) -> &TimeEra {
         &self.time_era
+    }
+
+    pub fn committee(&self) -> &[CommitteeId] {
+        self.parameters.committees.as_slice()
     }
 }
