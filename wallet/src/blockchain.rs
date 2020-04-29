@@ -1,10 +1,10 @@
 use chain_addr::Discrimination;
-use chain_impl_mockchain::vote::CommitteeId;
 use chain_impl_mockchain::{
     block::Block,
     fee::FeeAlgorithm as _,
     ledger::{Error, Ledger, LedgerParameters, LedgerStaticParameters},
     transaction::Input,
+    vote::CommitteeId,
 };
 use chain_time::TimeEra;
 use std::time::{Duration, SystemTime};
