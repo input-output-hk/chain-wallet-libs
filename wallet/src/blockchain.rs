@@ -1,3 +1,4 @@
+use chain_addr::Discrimination;
 use chain_impl_mockchain::{
     block::Block,
     fee::FeeAlgorithm as _,
@@ -38,5 +39,9 @@ impl Settings {
     // seconds in unix time (seconds elapsed since 1-Jan-1970)
     pub fn start_date_time(&self) -> u64 {
         self.static_parameters.block0_start_time.0
+    }
+
+    pub fn discrimination(&self) -> Discrimination {
+        self.static_parameters.discrimination
     }
 }
