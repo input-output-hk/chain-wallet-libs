@@ -33,4 +33,10 @@ impl Settings {
 
         value > minimal_value
     }
+
+    // extract the block0 date-time
+    // seconds in unix time (seconds elapsed since 1-Jan-1970)
+    pub fn start_date_time(&self) -> u64 {
+        self.static_parameters.block0_start_time.0
+    }
 }
