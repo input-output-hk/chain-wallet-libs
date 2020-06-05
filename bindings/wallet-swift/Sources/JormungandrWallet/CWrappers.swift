@@ -60,7 +60,9 @@ func walletCastVote(wallet: WalletPtr, settings: SettingsPtr, proposal: Proposal
     var length: UInt = 0
     let error = iohk_jormungandr_wallet_vote_cast(wallet, settings, proposal, choice, &result, &length)
     try processError(error)
-    return Data(UnsafeBufferPointer(start: result, count: Int(length)))
+    let buffer = UnsafeBufferPointer(start: result, count: Int(length))
+    iohk_jormungandr_wallet_delete_buffer(UnsafeMutablePointer(mutating: result), length)
+    return Data(buffer)
 }
 
 func walletConvert(wallet: WalletPtr, settings: SettingsPtr) throws -> ConversionPtr {
