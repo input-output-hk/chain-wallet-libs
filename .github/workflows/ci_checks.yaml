@@ -115,4 +115,31 @@ jobs:
 
       - name: eslint
         working-directory: ./bindings/wallet-cordova
-        run: npm run eslint 
+        run: npm run eslint
+
+  swift-format:
+    name: check formatting of the Swift code
+    runs-on: macos-latest
+    steps:
+      - name: install swift-format
+        run: |
+          set -ex
+          git clone -b swift-5.2-branch --depth=1 https://github.com/apple/swift-format.git
+          cd swift-format
+          swift build --configuration release
+          sudo cp ./.build/x86_64-apple-macosx/release/swift-format /usr/local/bin
+          cd ..
+          rm -rf swift-format
+
+      - name: checkout sources
+        uses: actions/checkout@v2
+
+      - name: run linter
+        working-directory: ./bindings/wallet-swift
+        run: |
+          set -ex
+          OUTPUT=`find . -name "*.swift" -exec swift-format lint --configuration ./swift-format-config.json {} 2>&1 \;`
+          echo "$OUTPUT"
+          if [ ! -z "$OUTPUT" ]; then
+            exit 1
+          fi
