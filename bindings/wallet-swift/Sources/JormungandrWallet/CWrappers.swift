@@ -2,11 +2,11 @@ import Foundation
 import JormungandrWalletC
 
 enum WalletError: Error {
-    case WalletCError(reason: String)
+    case walletCError(reason: String)
 }
 
 enum VotePayloadType: UInt8 {
-    case Public = 1
+    case `public` = 1
 }
 
 private func processError(_ error: ErrorPtr?) throws {
@@ -14,11 +14,11 @@ private func processError(_ error: ErrorPtr?) throws {
         return
     }
 
-    let cStringReason = iohk_jormungandr_wallet_error_to_string(error);
+    let cStringReason = iohk_jormungandr_wallet_error_to_string(error)
     let reason = String(cString: cStringReason!)
     iohk_jormungandr_wallet_delete_string(cStringReason)
     iohk_jormungandr_wallet_delete_error(error)
-    throw WalletError.WalletCError(reason: reason)
+    throw WalletError.walletCError(reason: reason)
 }
 
 func walletRecover(mnemonics: String) throws -> WalletPtr {
@@ -38,7 +38,12 @@ func walletTotalValue(wallet: WalletPtr) throws -> UInt64 {
 func walletSettings(wallet: WalletPtr, block0: Data) throws -> SettingsPtr {
     let block0 = Array(block0)
     var settings: SettingsPtr?
-    let error = iohk_jormungandr_wallet_retrieve_funds(wallet, block0, UInt(block0.count), &settings)
+    let error = iohk_jormungandr_wallet_retrieve_funds(
+        wallet,
+        block0,
+        UInt(block0.count),
+        &settings
+    )
     try processError(error)
     return settings!
 }
@@ -55,10 +60,19 @@ func walletSetState(wallet: WalletPtr, value: UInt64, counter: UInt32) throws {
     try processError(error)
 }
 
-func walletCastVote(wallet: WalletPtr, settings: SettingsPtr, proposal: ProposalPtr, choice: UInt8) throws -> Data {
+func walletCastVote(wallet: WalletPtr, settings: SettingsPtr, proposal: ProposalPtr, choice: UInt8)
+    throws -> Data
+{
     var result: UnsafePointer<UInt8>?
     var length: UInt = 0
-    let error = iohk_jormungandr_wallet_vote_cast(wallet, settings, proposal, choice, &result, &length)
+    let error = iohk_jormungandr_wallet_vote_cast(
+        wallet,
+        settings,
+        proposal,
+        choice,
+        &result,
+        &length
+    )
     try processError(error)
     let buffer = UnsafeBufferPointer(start: result, count: Int(length))
     iohk_jormungandr_wallet_delete_buffer(UnsafeMutablePointer(mutating: result), length)
@@ -76,10 +90,15 @@ func conversionTransactionsSize(conversion: ConversionPtr) -> UInt {
     return iohk_jormungandr_wallet_convert_transactions_size(conversion)
 }
 
-func conversionTransactionsGet(conversion: ConversionPtr, index: UInt) throws -> Data  {
+func conversionTransactionsGet(conversion: ConversionPtr, index: UInt) throws -> Data {
     var result: UnsafePointer<UInt8>?
     var length: UInt = 0
-    let error = iohk_jormungandr_wallet_convert_transactions_get(conversion, index, &result, &length)
+    let error = iohk_jormungandr_wallet_convert_transactions_get(
+        conversion,
+        index,
+        &result,
+        &length
+    )
     try processError(error)
     return Data(UnsafeBufferPointer(start: result, count: Int(length)))
 }
@@ -92,10 +111,18 @@ func conversionIgnored(conversion: ConversionPtr) throws -> (value: UInt64, igno
     return (value, ignored)
 }
 
-func proposalNew(votePlanId: Data, payloadType: VotePayloadType, index: UInt8, numChoices: UInt8) throws -> ProposalPtr {
+func proposalNew(votePlanId: Data, payloadType: VotePayloadType, index: UInt8, numChoices: UInt8)
+    throws -> ProposalPtr
+{
     let votePlanId = Array(votePlanId)
     var proposal: ProposalPtr?
-    let error = iohk_jormungandr_wallet_vote_proposal(votePlanId, payloadType.rawValue, index, numChoices, &proposal)
+    let error = iohk_jormungandr_wallet_vote_proposal(
+        votePlanId,
+        payloadType.rawValue,
+        index,
+        numChoices,
+        &proposal
+    )
     try processError(error)
     return proposal!
 }

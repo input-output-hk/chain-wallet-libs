@@ -7,12 +7,14 @@ let package = Package(
     products: [
         .library(
             name: "JormungandrWallet",
-            targets: ["JormungandrWallet"]),
+            targets: ["JormungandrWallet"]
+        )
     ],
     targets: [
         .systemLibrary(name: "JormungandrWalletC"),
         .target(
             name: "JormungandrWallet",
-            dependencies: ["JormungandrWalletC"]),
+            dependencies: ["JormungandrWalletC"]
+        ),
     ]
 )

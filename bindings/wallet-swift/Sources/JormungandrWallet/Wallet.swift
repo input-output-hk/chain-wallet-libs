@@ -1,4 +1,5 @@
 import Foundation
+
 import JormungandrWalletC
 
 class Wallet {
@@ -25,11 +26,18 @@ class Wallet {
     }
 
     func vote(settings: Settings, proposal: Proposal, choice: UInt8) throws -> Data {
-        return try walletCastVote(wallet: self.pointer, settings: settings.pointer, proposal: proposal.pointer, choice: choice)
+        return try walletCastVote(
+            wallet: self.pointer,
+            settings: settings.pointer,
+            proposal: proposal.pointer,
+            choice: choice
+        )
     }
 
     func convert(settings: Settings) throws -> Conversion {
-        return try Conversion(withRawPointer: walletConvert(wallet: self.pointer, settings: settings.pointer))
+        return try Conversion(
+            withRawPointer: walletConvert(wallet: self.pointer, settings: settings.pointer)
+        )
     }
 
     deinit {
