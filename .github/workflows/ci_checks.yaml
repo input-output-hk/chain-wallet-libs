@@ -121,15 +121,29 @@ jobs:
     name: check formatting of the Swift code
     runs-on: macos-latest
     steps:
-      - name: install swift-format
+      - name: get swift-format repo hash
+        id: swift-format-hash
+        run: echo "::set-output name=hash::$(git ls-remote https://github.com/apple/swift-format.git swift-5.2-branch | awk '{print $1}')"
+
+      - name: download swift-format
+        id: swift-format
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/swift-format/.build/x86_64-apple-macosx/release/swift-format
+          key: swift-format-${{ steps.swift-format-hash.outputs.hash }}
+
+      - name: build swift-format
+        if: ${{ steps.swift-format.outputs.cache-hit != 'true' }}
         run: |
           set -ex
+          cd ~
           git clone -b swift-5.2-branch --depth=1 https://github.com/apple/swift-format.git
           cd swift-format
           swift build --configuration release
-          sudo cp ./.build/x86_64-apple-macosx/release/swift-format /usr/local/bin
-          cd ..
-          rm -rf swift-format
+
+      - name: install swift-format
+        run: sudo cp ~/swift-format/.build/x86_64-apple-macosx/release/swift-format /usr/local/bin
 
       - name: checkout sources
         uses: actions/checkout@v2
