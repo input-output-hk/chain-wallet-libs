@@ -1,0 +1,4 @@
+module JormungandrWalletC {
+    umbrella header "shim.h"
+    export *
+}
