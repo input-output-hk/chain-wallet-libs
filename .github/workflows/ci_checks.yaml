@@ -117,8 +117,8 @@ jobs:
         working-directory: ./bindings/wallet-cordova
         run: npm run eslint
 
-  swift-format:
-    name: check formatting of the Swift code
+  swift-library:
+    name: check Swift library
     runs-on: macos-latest
     steps:
       - name: get swift-format repo hash
@@ -147,6 +147,8 @@ jobs:
 
       - name: checkout sources
         uses: actions/checkout@v2
+        with:
+          submodules: true
 
       - name: run linter
         working-directory: ./bindings/wallet-swift
@@ -157,3 +159,17 @@ jobs:
           if [ ! -z "$OUTPUT" ]; then
             exit 1
           fi
+
+      - name: install stable Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: check library build (native)
+        working-directory: ./bindings/wallet-swift
+        run: |
+          set -ex
+          cargo build -p jormungandrwallet
+          swift build -v -Xcc -I./../wallet-c/ -Xlinker -lpthread -Xlinker -l./../../target/debug/libjormungandrwallet.a
