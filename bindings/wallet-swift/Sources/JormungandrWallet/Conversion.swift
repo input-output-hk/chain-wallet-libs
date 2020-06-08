@@ -1,5 +1,4 @@
 import Foundation
-
 import JormungandrWalletC
 
 class Conversion {
@@ -10,18 +9,18 @@ class Conversion {
     }
 
     func size() -> UInt {
-        return conversionTransactionsSize(conversion: self.pointer)
+        return WalletC.Conversion.transactionsSize(conversion: self.pointer)
     }
 
     func get(index: UInt) throws -> Data {
-        return try conversionTransactionsGet(conversion: self.pointer, index: index)
+        return try WalletC.Conversion.transactionsGet(conversion: self.pointer, index: index)
     }
 
     func ignored() throws -> (value: UInt64, ignored: UInt) {
-        return try conversionIgnored(conversion: self.pointer)
+        return try WalletC.Conversion.ignored(conversion: self.pointer)
     }
 
     deinit {
-        conversionDelete(conversion: self.pointer)
+        WalletC.Conversion.delete(conversion: self.pointer)
     }
 }

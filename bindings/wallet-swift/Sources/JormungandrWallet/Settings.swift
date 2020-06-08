@@ -1,5 +1,4 @@
 import Foundation
-
 import JormungandrWalletC
 
 class Settings {
@@ -10,6 +9,6 @@ class Settings {
     }
 
     deinit {
-        settingsDelete(settings: self.pointer)
+        WalletC.Settings.delete(settings: self.pointer)
     }
 }

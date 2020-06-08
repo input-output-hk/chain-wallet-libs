@@ -1,32 +1,33 @@
 import Foundation
-
 import JormungandrWalletC
 
 class Wallet {
     private var pointer: WalletPtr
 
     init(withMnemonics mnemonics: String) throws {
-        self.pointer = try walletRecover(mnemonics: mnemonics)
+        self.pointer = try WalletC.Wallet.recover(mnemonics: mnemonics)
     }
 
     func totalValue() throws -> UInt64 {
-        return try walletTotalValue(wallet: self.pointer)
+        return try WalletC.Wallet.totalValue(wallet: self.pointer)
     }
 
     func settings(block0: Data) throws -> Settings {
-        return try Settings(withRawPointer: walletSettings(wallet: self.pointer, block0: block0))
+        return try Settings(
+            withRawPointer: WalletC.Wallet.settings(wallet: self.pointer, block0: block0)
+        )
     }
 
     func id() throws -> Data {
-        return try walletId(wallet: self.pointer)
+        return try WalletC.Wallet.id(wallet: self.pointer)
     }
 
     func setState(value: UInt64, counter: UInt32) throws {
-        try walletSetState(wallet: self.pointer, value: value, counter: counter)
+        try WalletC.Wallet.setState(wallet: self.pointer, value: value, counter: counter)
     }
 
     func vote(settings: Settings, proposal: Proposal, choice: UInt8) throws -> Data {
-        return try walletCastVote(
+        return try WalletC.Wallet.castVote(
             wallet: self.pointer,
             settings: settings.pointer,
             proposal: proposal.pointer,
@@ -36,11 +37,11 @@ class Wallet {
 
     func convert(settings: Settings) throws -> Conversion {
         return try Conversion(
-            withRawPointer: walletConvert(wallet: self.pointer, settings: settings.pointer)
+            withRawPointer: WalletC.Wallet.convert(wallet: self.pointer, settings: settings.pointer)
         )
     }
 
     deinit {
-        walletDelete(wallet: self.pointer)
+        WalletC.Wallet.delete(wallet: self.pointer)
     }
 }
