@@ -10,21 +10,10 @@ Build the Swift library:
 
 ## iOS
 
-Build `wallet-c`:
+Make sure that you have installed:
 
-    cargo rustc -p jormungandrwallet --target x86_64-apple-ios --release -- -C lto
-    cargo rustc -p jormungandrwallet --target aarch64-apple-ios --release -- -C lto
+* XCode.
+* Rust with `x86_64-apple-ios` and `aarch64-apple-ios` targets.
 
-Link universal library:
-
-    mkdir Lib
-    lipo -create -output ./Lib/libjormungandrwallet.a -arch x86_64 ./../../target/x86_64-apple-ios/release/libjormungandrwallet.a -arch arm64 ./../../target/aarch64-apple-ios/release/libjormungandrwallet.a
-
-Generate XCode project:
-
-    swift package generate-xcodeproj
-
-Build the framework:
-
-    xcodebuild -project ./JormungandrWallet.xcodeproj -xcconfig ./Config/Release.xcconfig
+To build run `./build-framework.sh`
 
