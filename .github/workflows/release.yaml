@@ -362,3 +362,42 @@ jobs:
           tag: ${{ github.ref }}
           file_glob: true
           overwrite: true
+
+  swift_library:
+    runs-on: macos-latest
+    needs: initial_release
+    steps:
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          default: true
+
+      - run: rustup target add x86_64-apple-ios
+      - run: rustup target add aarch64-apple-ios
+
+      - name: Checkout code
+        uses: actions/checkout@v1
+        with:
+          submodules: true
+
+      - name: Get tag version
+        id: get_version
+        run: echo ::set-output name=VERSION::``${GITHUB_REF#refs/tags/}``
+        shell: bash
+
+      - name: Build Swift library
+        working-directory: ./bindings/wallet-swift
+        run: ./build-framework.sh
+
+      - name: Pack library
+        run: tar -C ./bindings/wallet-swift/build -zcvf JormungandrWallet-${{ steps.get_version.outputs.VERSION }}.framework.tar.gz ./JormungandrWallet.framework
+
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v1-release
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: JormungandrWallet-${{ steps.get_version.outputs.VERSION }}.framework.tar.gz
+          asset_name: JormungandrWallet-${{ steps.get_version.outputs.VERSION }}.framework
+          tag: ${{ github.ref }}
+          overwrite: true
