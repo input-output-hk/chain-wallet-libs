@@ -60,9 +60,8 @@
             </feature>
         </config-file>
 
-        <header-file src="src/ios/LibWallet.h" />
-        <header-file src="src/ios/WalletPlugin.h" />
-        <source-file src="src/ios/WalletPlugin.m" />
-        <source-file src="src/ios/libjormungandrwallet.a" framework="true" />
+        <header-file src="src/ios/WalletPlugin-Bridging-Header.h" />
+        <source-file src="src/ios/WalletPlugin.swift" />
+        <framework src="src/ios/JormungandrWallet.framework" custom="true" embed="true" />
     </platform>
 </plugin>
