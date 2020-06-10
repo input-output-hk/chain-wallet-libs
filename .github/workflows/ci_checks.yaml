@@ -115,4 +115,61 @@ jobs:
 
       - name: eslint
         working-directory: ./bindings/wallet-cordova
-        run: npm run eslint 
+        run: npm run eslint
+
+  swift-library:
+    name: check Swift library
+    runs-on: macos-latest
+    steps:
+      - name: get swift-format repo hash
+        id: swift-format-hash
+        run: echo "::set-output name=hash::$(git ls-remote https://github.com/apple/swift-format.git swift-5.2-branch | awk '{print $1}')"
+
+      - name: download swift-format
+        id: swift-format
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/swift-format/.build/x86_64-apple-macosx/release/swift-format
+          key: swift-format-${{ steps.swift-format-hash.outputs.hash }}
+
+      - name: build swift-format
+        if: ${{ steps.swift-format.outputs.cache-hit != 'true' }}
+        run: |
+          set -ex
+          cd ~
+          git clone -b swift-5.2-branch --depth=1 https://github.com/apple/swift-format.git
+          cd swift-format
+          swift build --configuration release
+
+      - name: install swift-format
+        run: sudo cp ~/swift-format/.build/x86_64-apple-macosx/release/swift-format /usr/local/bin
+
+      - name: checkout sources
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: run linter
+        working-directory: ./bindings/wallet-swift
+        run: |
+          set -ex
+          OUTPUT=`find . -name "*.swift" -exec swift-format lint --configuration ./swift-format-config.json {} 2>&1 \;`
+          echo "$OUTPUT"
+          if [ ! -z "$OUTPUT" ]; then
+            exit 1
+          fi
+
+      - name: install stable Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: check library build (native)
+        working-directory: ./bindings/wallet-swift
+        run: |
+          set -ex
+          cargo build -p jormungandrwallet
+          swift build -v -Xcc -I./../wallet-c/ -Xlinker -lpthread -Xlinker -l./../../target/debug/libjormungandrwallet.a

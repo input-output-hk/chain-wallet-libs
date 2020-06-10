@@ -1,0 +1,11 @@
+CONFIGURATION = Release
+TARGET_NAME = JormungandrWallet
+SUPPORTED_PLATFORMS = iphonesimulator iphoneos
+VALID_ARCHS = arm64 x86_64
+ENABLE_BITCODE = NO
+BUILD_LIBRARY_FOR_DISTRIBUTION = YES
+HEADER_SEARCH_PATHS = $(inherited) $(SRCROOT)/../wallet-c
+OTHER_LDFLAGS = $(inherited) -L"$(SRCROOT)/Lib" -ljormungandrwallet
+PRODUCT_BUNDLE_IDENTIFIER = com.iohk.jormungandrwallet
+FRAMEWORK_VERSION = 0.4.0-pre2
+
