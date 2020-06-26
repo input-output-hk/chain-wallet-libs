@@ -34,6 +34,25 @@ impl Wallet {
         self.account.account_id()
     }
 
+    /// list all the UTxO's account ID if any
+    pub fn utxo_account_id(&self) -> Vec<AccountId> {
+        self.icarus
+            .stake_accounts()
+            .into_iter()
+            .map(|a| a.account_id())
+            .collect()
+    }
+
+    /// set the state for the given account id
+    pub fn utxo_account_id_set_state(&mut self, id: &AccountId, value: Value, counter: u32) {
+        for account in self.icarus.stake_accounts_mut() {
+            if &account.account_id() == id {
+                account.set_account_state(value, counter);
+                break;
+            }
+        }
+    }
+
     /// retrieve a wallet from the given mnemonics, password and protocol magic
     ///
     /// this function will work for all yoroi, daedalus and other wallets
@@ -241,6 +260,7 @@ impl Wallet {
         settings: Settings,
         proposal: &Proposal,
         choice: Choice,
+        fall_back: bool,
     ) -> Result<Box<[u8]>, Error> {
         let payload = if let Some(payload) = proposal.vote(choice) {
             payload
@@ -249,7 +269,17 @@ impl Wallet {
         };
 
         let mut builder = wallet::transaction::TransactionBuilder::new(settings, vec![], payload);
-        builder.select_from(&mut self.account);
+        let enough_input = builder.select_from(&mut self.account);
+
+        if fall_back && !enough_input {
+            for account in self.icarus.stake_accounts_mut() {
+                let enough_input = builder.select_from(account);
+                if enough_input {
+                    break;
+                }
+            }
+        }
+
         let tx = builder
             .finalize_tx(())
             .map_err(|e| Error::wallet_transaction().with(e))?;

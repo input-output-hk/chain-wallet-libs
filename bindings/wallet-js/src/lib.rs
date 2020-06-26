@@ -130,6 +130,7 @@ impl Wallet {
                 settings.0.clone(),
                 &proposal.0,
                 wallet_core::Choice::new(choice),
+                false,
             )
             .map_err(|e| JsValue::from(e.to_string()))
     }

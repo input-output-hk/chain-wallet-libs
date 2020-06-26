@@ -635,7 +635,7 @@ pub unsafe fn wallet_vote_cast(
 
     let choice = Choice::new(choice);
 
-    let transaction = match wallet.vote(settings, proposal, choice) {
+    let transaction = match wallet.vote(settings, proposal, choice, false) {
         Ok(transaction) => Box::leak(transaction),
         Err(err) => return err.into(),
     };
