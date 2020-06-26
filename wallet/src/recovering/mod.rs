@@ -15,7 +15,10 @@ use ed25519_bip32::{self, DerivationScheme, XPrv, XPRV_SIZE};
 use hdkeygen::Key;
 use thiserror::Error;
 
-pub use self::{daedalus::RecoveringDaedalus, icarus::RecoveringIcarus};
+pub use self::{
+    daedalus::RecoveringDaedalus,
+    icarus::{RecoveringIcarus, StakeAccount},
+};
 
 #[derive(Debug, Error)]
 pub enum RecoveryError {
@@ -354,7 +357,7 @@ mod tests {
             .unwrap();
 
         let address: OldAddress = ADDRESSES3[0].parse().unwrap();
-        assert!(wallet.check_address(&address).is_some());
+        assert!(wallet.check_legacy_address(&address).is_some());
 
         let fragment_value = Value(10);
         let fragment = Fragment::OldUtxoDeclaration(UtxoDeclaration {

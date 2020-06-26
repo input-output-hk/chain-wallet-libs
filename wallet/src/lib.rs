@@ -7,7 +7,9 @@ pub mod transaction;
 pub use self::{
     blockchain::Settings,
     password::{Password, ScrubbedBytes},
-    recovering::{RecoveringDaedalus, RecoveringIcarus, RecoveryBuilder, RecoveryError},
+    recovering::{
+        RecoveringDaedalus, RecoveringIcarus, RecoveryBuilder, RecoveryError, StakeAccount,
+    },
 };
 use chain_impl_mockchain::{
     transaction::Input, transaction::UnspecifiedAccountIdentifier, value::Value,
