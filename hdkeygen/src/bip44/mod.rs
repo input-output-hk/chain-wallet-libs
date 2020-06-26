@@ -1,8 +1,9 @@
 mod account;
 mod address;
 mod root;
+mod sskey;
 
-pub use self::{account::Account, address::Address, root::Root};
+pub use self::{account::Account, address::Address, root::Root, sskey::SSKey};
 use chain_path_derivation::{Derivation, HardDerivation};
 use ed25519_bip32::XPrv;
 

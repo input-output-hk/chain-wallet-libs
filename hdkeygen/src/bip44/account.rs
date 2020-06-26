@@ -1,5 +1,5 @@
 use crate::{
-    bip44::{Address, COIN_TYPE},
+    bip44::{Address, SSKey, COIN_TYPE},
     Key,
 };
 use chain_path_derivation::{
@@ -12,6 +12,8 @@ pub struct Account<K> {
     key: Key<K, Bip44<bip44::Account>>,
 }
 
+const CHANGE_STAKE: SoftDerivation = DerivationPath::<Bip44<bip44::Account>>::STAKE;
+
 pub struct AddressRange<K> {
     key: Key<K, Bip44<bip44::Change>>,
     range: SoftDerivationRange,
@@ -22,6 +24,13 @@ impl Account<XPrv> {
         Account {
             key: self.key.public(),
         }
+    }
+
+    pub fn stake_key(&self) -> SSKey<XPrv> {
+        let change = Some(CHANGE_STAKE.into());
+        let key = self.cached_key().derive_path_unchecked(change.as_ref());
+
+        SSKey::new(key)
     }
 
     pub fn addresses(
