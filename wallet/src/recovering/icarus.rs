@@ -57,6 +57,11 @@ impl StakeAccount {
         self.stake_pub_key.account_id()
     }
 
+    /// unsafely access the private key
+    pub fn private_key(&self) -> &SSKey<XPrv> {
+        &self.stake_key
+    }
+
     pub fn set_account_state(&mut self, value: Value, counter: u32) {
         self.value = value;
         self.counter = counter;
