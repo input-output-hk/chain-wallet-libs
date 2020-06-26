@@ -111,6 +111,16 @@ impl<P> Key<XPrv, P> {
             derivation_scheme,
         }
     }
+
+    /// unsafe function that print the private key in the given formatter
+    pub fn display(&self) -> String {
+        format!(
+            "{key} ({path} - {scheme:?})",
+            key = hex::encode(self.key.extended_secret_key_slice()),
+            path = self.path,
+            scheme = self.derivation_scheme
+        )
+    }
 }
 
 impl<P> Key<XPub, P> {
