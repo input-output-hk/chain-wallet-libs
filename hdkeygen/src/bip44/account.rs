@@ -27,8 +27,8 @@ impl Account<XPrv> {
     }
 
     pub fn stake_key(&self) -> SSKey<XPrv> {
-        let change = Some(CHANGE_STAKE.into());
-        let key = self.cached_key().derive_path_unchecked(change.as_ref());
+        let change = &[CHANGE_STAKE.into(), 0.into()];
+        let key = self.cached_key().derive_path_unchecked(change);
 
         SSKey::new(key)
     }
