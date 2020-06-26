@@ -1,9 +1,13 @@
 use chain_addr::Discrimination;
 use chain_impl_mockchain::{
-    block::Block,
+    certificate::CertificateSlice,
+    chaintypes::HeaderId,
     fee::FeeAlgorithm as _,
+    fee::LinearFee,
+    fragment::Fragment,
     ledger::{Error, Ledger, LedgerParameters, LedgerStaticParameters},
     transaction::Input,
+    value::Value,
     vote::CommitteeId,
 };
 use chain_time::TimeEra;
@@ -12,22 +16,33 @@ use std::time::{Duration, SystemTime};
 #[derive(Clone)]
 pub struct Settings {
     pub static_parameters: LedgerStaticParameters,
-    pub parameters: LedgerParameters,
     pub time_era: TimeEra,
+    pub fees: LinearFee,
+    pub committees: Vec<CommitteeId>,
 }
 
 impl Settings {
-    pub fn new(block: &Block) -> Result<Self, Error> {
-        let header_id = block.header.id();
-        let ledger = Ledger::new(header_id, block.contents.iter())?;
+    pub fn new<'a, I>(block0_initial_hash: HeaderId, contents: I) -> Result<Self, Error>
+    where
+        I: Iterator<Item = &'a Fragment>,
+    {
+        let (static_parameters, fees, committees, time_era) = {
+            let ledger = Ledger::new(block0_initial_hash, contents)?;
 
-        let static_parameters = ledger.get_static_parameters().clone();
-        let parameters = ledger.get_ledger_parameters();
-        let time_era = ledger.era().clone();
+            let static_parameters = ledger.get_static_parameters().clone();
+            let time_era = ledger.era().clone();
+
+            let LedgerParameters {
+                fees, committees, ..
+            } = ledger.get_ledger_parameters();
+
+            (static_parameters, fees, committees, time_era)
+        };
 
         Ok(Self {
             static_parameters,
-            parameters,
+            fees,
+            committees: std::sync::Arc::try_unwrap(committees).unwrap(),
             time_era,
         })
     }
@@ -36,7 +51,7 @@ impl Settings {
     /// is covering at least its own input fees for a given transaction
     pub fn is_input_worth(&self, input: &Input) -> bool {
         let value = input.value();
-        let minimal_value = self.parameters.fees.fees_for_inputs_outputs(1, 0);
+        let minimal_value = self.fees.fees_for_inputs_outputs(1, 0);
 
         value > minimal_value
     }
@@ -56,6 +71,14 @@ impl Settings {
     }
 
     pub fn committee(&self) -> &[CommitteeId] {
-        self.parameters.committees.as_slice()
+        self.committees.as_slice()
+    }
+
+    pub fn calculate_fees(&self, cert: Option<CertificateSlice>, input: u8, output: u8) -> Value {
+        self.fees.calculate(cert, input, output)
+    }
+
+    pub fn block0_hash(&self) -> HeaderId {
+        self.static_parameters.block0_initial_hash
     }
 }

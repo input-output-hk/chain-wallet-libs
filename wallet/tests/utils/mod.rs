@@ -29,7 +29,8 @@ impl State {
     }
 
     pub fn settings(&self) -> Result<Settings, LedgerError> {
-        Settings::new(&self.block0)
+        let hash = self.block0.header.id();
+        Settings::new(hash, &mut self.block0.contents.iter())
     }
 
     pub fn apply_fragments<'a, F>(&'a mut self, fragments: F) -> Result<(), LedgerError>
