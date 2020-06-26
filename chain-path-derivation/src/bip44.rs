@@ -75,7 +75,7 @@ const INDEX_CHANGE: usize = 3;
 const INDEX_ADDRESS: usize = 4;
 
 /// the BIP44 purpose ('44). This is the first item of the derivation path
-const PURPOSE: HardDerivation = HardDerivation::new_unchecked(Derivation::new(0x8000_002C));
+const PURPOSE: HardDerivation = HardDerivation::new_unchecked(Derivation::new(0x8000_073c));
 
 /// create a Bip44 chain path derivation
 ///
