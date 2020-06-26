@@ -153,8 +153,7 @@ impl Wallet {
         let block0 =
             Block::read(&mut block0_bytes).map_err(|e| Error::invalid_input("block0").with(e))?;
 
-        let settings = wallet::Settings::new(&block0).unwrap();
-        for fragment in block0.contents.iter() {
+        let iter = block0.contents.iter().map(|fragment| {
             if let Some(daedalus) = &mut self.daedalus {
                 daedalus.check_fragment(&fragment.hash(), fragment);
             }
@@ -162,10 +161,17 @@ impl Wallet {
             if let Some(icarus) = &mut self.icarus {
                 icarus.check_fragment(&fragment.hash(), fragment);
             }
+
             self.free_keys.check_fragment(&fragment.hash(), fragment);
 
             self.confirm_transaction(fragment.hash());
-        }
+
+            fragment
+        });
+
+        let hash = block0.header.id();
+        let settings = wallet::Settings::new(hash, iter)
+            .map_err(|e| Error::invalid_input("block0").with(e))?;
 
         Ok(settings)
     }
