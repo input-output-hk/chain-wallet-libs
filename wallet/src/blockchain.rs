@@ -5,20 +5,24 @@ use chain_impl_mockchain::{
     fee::FeeAlgorithm as _,
     fee::{LinearFee, PerCertificateFee, PerVoteCertificateFee},
     fragment::Fragment,
-    ledger::recovery::{
-        pack_ledger_static_parameters, pack_time_era, unpack_ledger_static_parameters,
-        unpack_time_era,
-    },
     ledger::{Error, Ledger, LedgerParameters, LedgerStaticParameters},
     transaction::Input,
     value::Value,
     vote::CommitteeId,
 };
-use chain_ser::packer::Codec;
-use chain_time::TimeEra;
+use chain_ser::{
+    deser::{Deserialize, Serialize},
+    packer::Codec,
+};
+use chain_time::{
+    era::{pack_time_era, unpack_time_era},
+    TimeEra,
+};
+use std::convert::TryInto;
 use std::time::{Duration, SystemTime};
 
 #[derive(Clone)]
+#[cfg_attr(test, derive(PartialEq, Eq, Debug))]
 pub struct Settings {
     pub static_parameters: LedgerStaticParameters,
     pub time_era: TimeEra,
@@ -91,11 +95,8 @@ impl Settings {
         let buf = vec![];
         let mut codec = Codec::new(buf);
 
-        pack_ledger_static_parameters(&self.static_parameters, &mut codec)
-            .expect("failed to serialize static parameters");
-
+        pack_ledger_static_parameters(&self.static_parameters, &mut codec)?;
         pack_time_era(&self.time_era, &mut codec)?;
-
         pack_linear_fee(&self.fees, &mut codec)?;
 
         codec.put_u64(self.committees.len() as u64)?;
@@ -114,8 +115,6 @@ impl Settings {
         let fees = unpack_linear_fee(&mut codec)?;
 
         let committees_len = codec.get_u64()?;
-
-        use std::convert::TryInto;
         let committees: Result<Vec<CommitteeId>, std::io::Error> = (0..committees_len)
             .map(|_| {
                 let raw = codec.get_bytes(CommitteeId::COMMITTEE_ID_SIZE)?;
@@ -141,8 +140,25 @@ fn pack_linear_fee<W: std::io::Write>(
     codec.put_u64(linear_fee.constant)?;
     codec.put_u64(linear_fee.coefficient)?;
     codec.put_u64(linear_fee.certificate)?;
-    pack_per_certificate_fee(&linear_fee.per_certificate_fees, codec)?;
-    pack_per_vote_certificate_fee(&linear_fee.per_vote_certificate_fees, codec)?;
+
+    let PerCertificateFee {
+        certificate_pool_registration,
+        certificate_stake_delegation,
+        certificate_owner_stake_delegation,
+    } = linear_fee.per_certificate_fees;
+
+    pack_non_zero_u64(certificate_pool_registration, codec)?;
+    pack_non_zero_u64(certificate_stake_delegation, codec)?;
+    pack_non_zero_u64(certificate_owner_stake_delegation, codec)?;
+
+    let PerVoteCertificateFee {
+        certificate_vote_cast,
+        certificate_vote_plan,
+    } = linear_fee.per_vote_certificate_fees;
+
+    pack_non_zero_u64(certificate_vote_plan, codec)?;
+    pack_non_zero_u64(certificate_vote_cast, codec)?;
+
     Ok(())
 }
 
@@ -152,83 +168,97 @@ fn unpack_linear_fee<R: std::io::BufRead>(
     let constant = codec.get_u64()?;
     let coefficient = codec.get_u64()?;
     let certificate = codec.get_u64()?;
-    let per_certificate_fees = unpack_per_certificate_fee(codec)?;
-    let per_vote_certificate_fees = unpack_per_vote_certificate_fee(codec)?;
-    Ok(LinearFee {
-        constant,
-        coefficient,
-        certificate,
-        per_certificate_fees,
-        per_vote_certificate_fees,
-    })
-}
 
-fn pack_per_certificate_fee<W: std::io::Write>(
-    per_certificate_fee: &PerCertificateFee,
-    codec: &mut Codec<W>,
-) -> Result<(), std::io::Error> {
-    codec.put_u64(
-        per_certificate_fee
-            .certificate_pool_registration
-            .map(|v| v.get())
-            .unwrap_or(0),
-    )?;
-    codec.put_u64(
-        per_certificate_fee
-            .certificate_stake_delegation
-            .map(|v| v.get())
-            .unwrap_or(0),
-    )?;
-    codec.put_u64(
-        per_certificate_fee
-            .certificate_owner_stake_delegation
-            .map(|v| v.get())
-            .unwrap_or(0),
-    )?;
-    Ok(())
-}
-
-fn pack_per_vote_certificate_fee<W: std::io::Write>(
-    per_vote_certificate_fee: &PerVoteCertificateFee,
-    codec: &mut Codec<W>,
-) -> Result<(), std::io::Error> {
-    codec.put_u64(
-        per_vote_certificate_fee
-            .certificate_vote_plan
-            .map(|v| v.get())
-            .unwrap_or(0),
-    )?;
-    codec.put_u64(
-        per_vote_certificate_fee
-            .certificate_vote_cast
-            .map(|v| v.get())
-            .unwrap_or(0),
-    )?;
-    Ok(())
-}
-
-fn unpack_per_certificate_fee<R: std::io::BufRead>(
-    codec: &mut Codec<R>,
-) -> Result<PerCertificateFee, std::io::Error> {
     let certificate_pool_registration = std::num::NonZeroU64::new(codec.get_u64()?);
     let certificate_stake_delegation = std::num::NonZeroU64::new(codec.get_u64()?);
     let certificate_owner_stake_delegation = std::num::NonZeroU64::new(codec.get_u64()?);
 
-    Ok(PerCertificateFee {
-        certificate_pool_registration,
-        certificate_stake_delegation,
-        certificate_owner_stake_delegation,
-    })
-}
-
-fn unpack_per_vote_certificate_fee<R: std::io::BufRead>(
-    codec: &mut Codec<R>,
-) -> Result<PerVoteCertificateFee, std::io::Error> {
     let certificate_vote_plan = std::num::NonZeroU64::new(codec.get_u64()?);
     let certificate_vote_cast = std::num::NonZeroU64::new(codec.get_u64()?);
 
-    Ok(PerVoteCertificateFee {
-        certificate_vote_plan,
-        certificate_vote_cast,
+    Ok(LinearFee {
+        constant,
+        coefficient,
+        certificate,
+        per_certificate_fees: PerCertificateFee {
+            certificate_pool_registration,
+            certificate_stake_delegation,
+            certificate_owner_stake_delegation,
+        },
+        per_vote_certificate_fees: PerVoteCertificateFee {
+            certificate_vote_cast,
+            certificate_vote_plan,
+        },
     })
+}
+
+fn pack_ledger_static_parameters<W: std::io::Write>(
+    ledger_static_parameters: &LedgerStaticParameters,
+    mut codec: &mut Codec<W>,
+) -> Result<(), std::io::Error> {
+    ledger_static_parameters
+        .block0_initial_hash
+        .serialize(&mut codec)?;
+
+    codec.put_u64(ledger_static_parameters.block0_start_time.0)?;
+
+    let discrimination = match ledger_static_parameters.discrimination {
+        Discrimination::Production => 0,
+        Discrimination::Test => 1,
+    };
+
+    codec.put_u8(discrimination)?;
+
+    codec.put_u32(ledger_static_parameters.kes_update_speed)?;
+    Ok(())
+}
+
+fn unpack_ledger_static_parameters<R: std::io::BufRead>(
+    mut codec: &mut Codec<R>,
+) -> Result<LedgerStaticParameters, std::io::Error> {
+    let block0_initial_hash = HeaderId::deserialize(&mut codec)?;
+    let block0_start_time = chain_impl_mockchain::config::Block0Date(codec.get_u64()?);
+
+    let discrimination = match codec.get_u8()? {
+        0 => Discrimination::Production,
+        1 => Discrimination::Test,
+        _ => unreachable!("change this for error"),
+    };
+
+    let kes_update_speed = codec.get_u32()?;
+    Ok(LedgerStaticParameters {
+        block0_initial_hash,
+        block0_start_time,
+        discrimination,
+        kes_update_speed,
+    })
+}
+
+fn pack_non_zero_u64<W: std::io::Write>(
+    n: Option<std::num::NonZeroU64>,
+    codec: &mut Codec<W>,
+) -> Result<(), std::io::Error> {
+    let n = n.map(|v| v.get()).unwrap_or(0);
+    codec.put_u64(n)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn settings_ser_de() {
+        use chain_impl_mockchain::block::Block;
+
+        const BLOCK0: &[u8] = include_bytes!("../../test-vectors/block0");
+        let block = Block::deserialize(BLOCK0).unwrap();
+        let hash = block.header.id();
+        let settings = Settings::new(hash, block.contents.iter()).unwrap();
+
+        let raw = settings.serialize().unwrap();
+
+        let after = Settings::deserialize(&raw).unwrap();
+
+        assert_eq!(settings, after);
+    }
 }
