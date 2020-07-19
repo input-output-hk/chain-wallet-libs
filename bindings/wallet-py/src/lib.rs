@@ -8,6 +8,11 @@ struct PyWallet {
     wallet_ptr: Option<u64>,
 }
 
+#[pyclass]
+struct PyWalletSettings {
+    settings_ptr: Option<u64>,
+}
+
 #[pymethods]
 impl PyWallet {
     fn delete(&mut self) -> PyResult<()> {
@@ -31,6 +36,32 @@ impl PyWallet {
                 return PyResult::Err(exceptions::Exception::py_err(e.to_string()));
             }
             Ok(value)
+        } else {
+            PyResult::Err(exceptions::ValueError::py_err(
+                "Wallet object do not references any wallet",
+            ))
+        }
+    }
+
+    fn initial_funds(&self, block0: &[u8]) -> PyResult<PyWalletSettings> {
+        if let Some(wallet_ptr) = self.wallet_ptr {
+            let mut settings: SettingsPtr = null_mut();
+            let settings_ptr: *mut SettingsPtr = &mut settings;
+            if let Some(e) = unsafe {
+                wallet_retrieve_funds(
+                    wallet_ptr as WalletPtr,
+                    block0.as_ptr() as *const u8,
+                    block0.len(),
+                    settings_ptr,
+                )
+            }
+            .error()
+            {
+                return PyResult::Err(exceptions::Exception::py_err(e.to_string()));
+            }
+            Ok(PyWalletSettings {
+                settings_ptr: Some(settings_ptr as u64),
+            })
         } else {
             PyResult::Err(exceptions::ValueError::py_err(
                 "Wallet object do not references any wallet",
