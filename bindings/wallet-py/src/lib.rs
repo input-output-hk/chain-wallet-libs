@@ -5,11 +5,43 @@ use wallet_core::c::*;
 
 #[pyclass]
 struct PyWallet {
-    wallet_ptr: u64,
+    wallet_ptr: Option<u64>,
+}
+
+#[pymethods]
+impl PyWallet {
+    fn delete(&mut self) -> PyResult<()> {
+        if let Some(wallet_ptr) = self.wallet_ptr {
+            let wallet_ptr: WalletPtr = wallet_ptr as WalletPtr;
+            // double check here, supposedly it could never be null.
+            if !wallet_ptr.is_null() {
+                wallet_delete_wallet(wallet_ptr);
+            }
+            self.wallet_ptr = None;
+        }
+        Ok(())
+    }
+
+    fn total_value(&self) -> PyResult<u64> {
+        if let Some(wallet_ptr) = self.wallet_ptr {
+            let mut value: u64 = 0;
+            if let Some(e) =
+                unsafe { wallet_total_value(wallet_ptr as WalletPtr, &mut value) }.error()
+            {
+                return PyResult::Err(exceptions::Exception::py_err(e.to_string()));
+            }
+            Ok(value)
+        } else {
+            PyResult::Err(exceptions::ValueError::py_err(
+                "Wallet object do not references any wallet",
+            ))
+        }
+    }
 }
 
 #[pymodule]
 fn pyjormungandrwallet(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_class::<PyWallet>()?;
     #[pyfn(m, "wallet_recover")]
     fn py_wallet_recover(
         _py: Python,
@@ -30,17 +62,8 @@ fn pyjormungandrwallet(_py: Python, m: &PyModule) -> PyResult<()> {
             return PyResult::Err(exceptions::Exception::py_err(e.to_string()));
         }
         PyResult::Ok(PyWallet {
-            wallet_ptr: wallet_ptr as u64,
+            wallet_ptr: Some(wallet_ptr as u64),
         })
-    }
-
-    #[pyfn(m, "wallet_delete")]
-    fn py_wallet_delete(_py: Python, wallet: &PyWallet) -> PyResult<()> {
-        let wallet_ptr: WalletPtr = wallet.wallet_ptr as WalletPtr;
-        if !wallet_ptr.is_null() {
-            wallet_delete_wallet(wallet_ptr);
-        }
-        Ok(())
     }
     Ok(())
 }
