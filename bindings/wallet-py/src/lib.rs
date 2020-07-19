@@ -70,6 +70,21 @@ impl PyWallet {
     }
 }
 
+#[pymethods]
+impl PyWalletSettings {
+    fn delete(&mut self) -> PyResult<()> {
+        if let Some(settings_ptr) = self.settings_ptr {
+            let settings_ptr: SettingsPtr = settings_ptr as SettingsPtr;
+            // double check here, supposedly it could never be null.
+            if !settings_ptr.is_null() {
+                wallet_delete_settings(settings_ptr);
+            }
+            self.settings_ptr = None;
+        }
+        Ok(())
+    }
+}
+
 #[pymodule]
 fn pyjormungandrwallet(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyWallet>()?;
