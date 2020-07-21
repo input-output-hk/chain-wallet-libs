@@ -1,6 +1,6 @@
 use pyo3::exceptions;
 use pyo3::prelude::*;
-use wallet_core;
+use std::convert::TryInto;
 
 #[pyclass]
 pub struct PyWallet {
@@ -20,6 +20,17 @@ pub struct Conversion {
 #[pyclass]
 pub struct Proposal {
     proposal: wallet_core::Proposal,
+}
+
+#[pyclass]
+#[derive(Clone)]
+pub struct VotePlanId {
+    id: [u8; wallet_core::VOTE_PLAN_ID_LENGTH],
+}
+
+#[pyclass]
+pub struct Options {
+    options: wallet_core::Options,
 }
 
 #[pymethods]
@@ -162,6 +173,55 @@ impl Conversion {
             .transactions()
             .get(index)
             .map(|t| t.to_owned())
+    }
+}
+
+#[pymethods]
+impl VotePlanId {
+    #[staticmethod]
+    pub fn new_from_bytes(bytes: &[u8]) -> PyResult<VotePlanId> {
+        let array: [u8; wallet_core::VOTE_PLAN_ID_LENGTH] = bytes
+            .try_into()
+            .map_err(|_| exceptions::Exception::py_err("Invalid vote plan id length"))?;
+
+        Ok(VotePlanId { id: array })
+    }
+}
+
+#[pymethods]
+impl Proposal {
+    #[staticmethod]
+    pub fn new_proposal(
+        vote_plan_id: VotePlanId,
+        payload_type: &str,
+        index: u8,
+        options: &Options,
+    ) -> PyResult<Proposal> {
+        let payload_type = match payload_type.to_lowercase().as_str() {
+            "public" => Ok(wallet_core::PayloadType::Public),
+            _ => Err(exceptions::Exception::py_err(format!(
+                "{} payload type is not supported",
+                payload_type
+            ))),
+        }?;
+        Ok(Proposal {
+            proposal: wallet_core::Proposal::new(
+                vote_plan_id.id.into(),
+                payload_type,
+                index,
+                options.options.clone(),
+            ),
+        })
+    }
+}
+
+#[pymethods]
+impl Options {
+    #[staticmethod]
+    pub fn new_length(length: u8) -> PyResult<Options> {
+        wallet_core::Options::new_length(length)
+            .map_err(|e| exceptions::Exception::py_err(e.to_string()))
+            .map(|options| Options { options })
     }
 }
 
