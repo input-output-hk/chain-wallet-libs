@@ -1,115 +1,65 @@
 use pyo3::exceptions;
 use pyo3::prelude::*;
 use std::ptr::null_mut;
-use wallet_core::c::*;
+use wallet_core;
 
 #[pyclass]
-struct PyWallet {
-    wallet_ptr: Option<u64>,
+pub struct PyWallet {
+    wallet: wallet_core::Wallet,
 }
 
 #[pyclass]
-struct PyWalletSettings {
-    settings_ptr: Option<u64>,
+pub struct Settings {
+    settings: wallet_core::Settings,
+}
+
+#[pyclass]
+pub struct Conversion {
+    conversion: wallet_core::Conversion,
 }
 
 #[pymethods]
 impl PyWallet {
-    fn delete(&mut self) -> PyResult<()> {
-        if let Some(wallet_ptr) = self.wallet_ptr {
-            let wallet_ptr: WalletPtr = wallet_ptr as WalletPtr;
-            // double check here, supposedly it could never be null.
-            if !wallet_ptr.is_null() {
-                wallet_delete_wallet(wallet_ptr);
-            }
-            self.wallet_ptr = None;
-        }
-        Ok(())
+    /// retrieve a wallet from the given mnemonics and password
+    ///
+    /// this function will work for all yoroi, daedalus and other wallets
+    /// as it will try every kind of wallet anyway
+    ///
+    /// You can also use this function to recover a wallet even after you have
+    /// transferred all the funds to the new format (see the _convert_ function)
+    ///
+    /// the mnemonics should be in english
+    #[staticmethod]
+    pub fn recover(mnemonics: &str, password: &[u8]) -> PyResult<PyWallet> {
+        wallet_core::Wallet::recover(mnemonics, password)
+            .map_err(|e| exceptions::Exception::py_err(e.to_string()))
+            .map(|wallet| PyWallet { wallet })
     }
 
-    fn total_value(&self) -> PyResult<u64> {
-        if let Some(wallet_ptr) = self.wallet_ptr {
-            let mut value: u64 = 0;
-            if let Some(e) =
-                unsafe { wallet_total_value(wallet_ptr as WalletPtr, &mut value) }.error()
-            {
-                return PyResult::Err(exceptions::Exception::py_err(e.to_string()));
-            }
-            Ok(value)
-        } else {
-            PyResult::Err(exceptions::ValueError::py_err(
-                "Wallet object do not references any wallet",
-            ))
-        }
+    /// get the account ID bytes
+    ///
+    /// This ID is also the account public key, it can be used to retrieve the
+    /// account state (the value, transaction counter etc...).
+    pub fn id(&self) -> Vec<u8> {
+        self.wallet.id().as_ref().to_vec()
     }
 
-    fn initial_funds(&self, block0: &[u8]) -> PyResult<PyWalletSettings> {
-        if let Some(wallet_ptr) = self.wallet_ptr {
-            let mut settings: SettingsPtr = null_mut();
-            let settings_ptr: *mut SettingsPtr = &mut settings;
-            if let Some(e) = unsafe {
-                wallet_retrieve_funds(
-                    wallet_ptr as WalletPtr,
-                    block0.as_ptr() as *const u8,
-                    block0.len(),
-                    settings_ptr,
-                )
-            }
-            .error()
-            {
-                return PyResult::Err(exceptions::Exception::py_err(e.to_string()));
-            }
-            Ok(PyWalletSettings {
-                settings_ptr: Some(settings_ptr as u64),
-            })
-        } else {
-            PyResult::Err(exceptions::ValueError::py_err(
-                "Wallet object do not references any wallet",
-            ))
-        }
+    pub fn convert(&mut self, settings: &Settings) -> PyResult<Conversion> {
+        Ok(Conversion {
+            conversion: self.wallet.convert(settings.settings.clone()),
+        })
     }
-}
 
-#[pymethods]
-impl PyWalletSettings {
-    fn delete(&mut self) -> PyResult<()> {
-        if let Some(settings_ptr) = self.settings_ptr {
-            let settings_ptr: SettingsPtr = settings_ptr as SettingsPtr;
-            // double check here, supposedly it could never be null.
-            if !settings_ptr.is_null() {
-                wallet_delete_settings(settings_ptr);
-            }
-            self.settings_ptr = None;
-        }
-        Ok(())
+    pub fn retrieve_funds(&mut self, block0: &[u8]) -> Result<Settings, JsValue> {
+        self.0
+            .retrieve_funds(block0)
+            .map_err(|e| JsValue::from(e.to_string()))
+            .map(Settings)
     }
 }
 
 #[pymodule]
 fn pyjormungandrwallet(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyWallet>()?;
-    #[pyfn(m, "wallet_recover")]
-    fn py_wallet_recover(
-        _py: Python,
-        mnemonics: &str,
-        password: &[u8],
-        password_length: usize,
-    ) -> PyResult<PyWallet> {
-        let mut wallet_ptr: WalletPtr = null_mut();
-        let res = unsafe {
-            wallet_recover(
-                mnemonics,
-                password.as_ptr(),
-                password_length,
-                &mut wallet_ptr,
-            )
-        };
-        if let Some(e) = res.error() {
-            return PyResult::Err(exceptions::Exception::py_err(e.to_string()));
-        }
-        PyResult::Ok(PyWallet {
-            wallet_ptr: Some(wallet_ptr as u64),
-        })
-    }
     Ok(())
 }
