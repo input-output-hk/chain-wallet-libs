@@ -50,11 +50,11 @@ impl PyWallet {
         })
     }
 
-    pub fn retrieve_funds(&mut self, block0: &[u8]) -> Result<Settings, JsValue> {
-        self.0
+    pub fn retrieve_funds(&mut self, block0: &[u8]) -> PyResult<Settings> {
+        self.wallet
             .retrieve_funds(block0)
-            .map_err(|e| JsValue::from(e.to_string()))
-            .map(Settings)
+            .map_err(|e| exceptions::Exception::py_err(e.to_string()))
+            .map(|settings| Settings { settings })
     }
 }
 
