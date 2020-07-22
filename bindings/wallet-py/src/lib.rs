@@ -228,5 +228,9 @@ impl Options {
 #[pymodule]
 fn pyjormungandrwallet(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyWallet>()?;
+    m.add_class::<Proposal>()?;
+    m.add_class::<Options>()?;
+    m.add_class::<Conversion>()?;
+    m.add_class::<VotePlanId>()?;
     Ok(())
 }
