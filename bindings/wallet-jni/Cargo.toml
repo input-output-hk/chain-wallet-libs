@@ -1,15 +1,23 @@
 [package]
-name = "wallet-jni"
-version = "0.5.0-pre3"
 authors = ["Daniel Sanchez Quiros <daniel.sanchez@iohk.io>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
+name = "wallet-jni"
+version = "0.5.0-pre3"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
-crate-type = [ "cdylib" ]
+crate-type = ["cdylib"]
 
 [dependencies]
+chain-addr = {path = "../../chain-deps/chain-addr"}
+chain-impl-mockchain = {path = "../../chain-deps/chain-impl-mockchain"}
 jni = "0.16.0"
-wallet-core = { path = "../wallet-core" }
-chain-impl-mockchain = { path = "../../chain-deps/chain-impl-mockchain" }
+log = "0.4.6"
+wallet = {path = "../../wallet"}
+wallet-core = {path = "../wallet-core"}
+
+[build-dependencies]
+bindgen = "0.54.0"
+env_logger = "0.7"
+flapigen = "0.6.0-pre7"
