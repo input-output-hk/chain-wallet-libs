@@ -1,0 +1,178 @@
+use crate::jni_c_header::*;
+use chain_addr::{AddressReadable, Discrimination};
+use chain_impl_mockchain::{
+    certificate::VotePlanId,
+    value::Value,
+    vote::{Choice, Options, PayloadType},
+};
+use std::convert::{TryFrom, TryInto};
+use wallet_core::{AccountId, Conversion, Proposal, Settings, Wallet};
+
+/// the wallet
+///
+/// * use the `recover` function to recover the wallet from the mnemonics/password;
+/// * use the `retrieve_funds` to retrieve initial funds (if necessary) from the block0;
+///   then you can use `total_value` to see how much was recovered from the initial block0;
+///
+foreign_class!(
+#[derive(Clone)]
+class Wallet {
+    self_type Wallet;
+    /// retrieve a wallet from a list of free keys used as utxo's
+    ///
+    /// You can also use this function to recover a wallet even after you have
+    /// transferred all the funds to the new format (see the _convert_ function)
+    ///
+    /// @param account - the private key used for voting
+    /// @param utxoKeys - single keys used as utxo inputs
+    constructor Wallet::recover_free_keys(account: &[i8], utxoKeys: &[i8]) -> Result<Wallet, String> {
+        if utxoKeys.len() % 64 != 0 {
+            Err("utxoKeys length should be a multiple of 64".to_string())
+        } else {
+            let account: &[u8] = unsafe { std::slice::from_raw_parts(account.as_ptr() as *const u8, account.len()) };
+            let utxo_keys: &[[u8; 64]] = unsafe { std::slice::from_raw_parts(utxoKeys.as_ptr() as *const [u8; 64], utxoKeys.len() / 64) };
+
+            Wallet::recover_free_keys(account, utxo_keys).map_err(|e| e.to_string())
+        }
+    }
+    fn Wallet::id(&self) -> AccountId {
+        this.id()
+    }
+    fn Wallet::retrieve_funds(&mut self, block0_bytes: &[i8]) -> Result<Settings, String> {
+        this.retrieve_funds(i8_to_u8(block0_bytes)).map_err(|e| e.to_string())
+    }
+    fn Wallet::set_state(&mut self, value: Value, counter: i64) {
+        this.set_state(value, counter as u32);
+    }
+    fn Wallet::total_value(&self) -> Value;
+    fn Wallet::convert(&mut self, settings: Settings) -> Conversion;
+    fn Wallet::vote(&mut self, settings: Settings, proposal: &Proposal, choice: Choice) -> Result<Box<[i8]>, String> {
+        this.vote(settings, proposal, choice).map(|ptr| {
+            // TODO: extract this as a function
+            // cast Box<[u8]> to Box<[u8]>
+            unsafe {
+                let len = ptr.len();
+                let ptr = Box::into_raw(ptr);
+                let slice = std::slice::from_raw_parts_mut(ptr as *mut i8, len);
+                Box::from_raw(slice)
+            }
+        }).map_err(|e| e.to_string())
+    }
+});
+
+foreign_enum!(
+    enum Discrimination {
+        PRODUCTION = Discrimination::Production,
+        TESTING = Discrimination::Test,
+    }
+);
+
+foreign_class!(
+//ANCHOR: derive_usage
+/// Class comment description for Foo.
+#[derive(Clone)]
+class AccountId {
+    self_type AccountId;
+    private constructor AccountId::from_bytes(bytes: &[i8]) -> Result<AccountId, &'static str> {
+        i8_to_u8(bytes).try_into().map(AccountId::from_raw).map_err(|e| "AccountId constructor expected 32 bytes")
+    }
+
+    fn AccountId::to_bytes(&self) -> &[i8] {
+        u8_to_i8(this.as_ref())
+    }
+
+    fn AccountId::address(&self, discrimination: Discrimination) -> String {
+        AddressReadable::from_address("bech32", &this.address(discrimination)).as_string().to_owned()
+    }
+
+});
+
+foreign_class!(
+/// The blockchain settings
+#[derive(Clone)]
+class Settings {
+    self_type Settings;
+    private constructor Settings::new() -> Result<Settings, &'static str> {
+        Err("Settings are not expected to be constructed outside native code")
+    }
+});
+
+foreign_class!(
+/// Value type, internally is represented as a 64-bit unsigned integer
+#[derive(Clone)]
+class Value {
+    self_type Value;
+    constructor Value::from_i64(n: i64) -> Value {
+        Value(n as u64)
+    }
+});
+
+foreign_class!(
+/// Scalar type, internally is represented as a 64-bit unsigned integer
+#[derive(Clone)]
+class Choice {
+    self_type Choice;
+    constructor Choice::from_16(n: i16) -> Result<Choice, &'static str> {
+        n.try_into().map(Choice::new).map_err(|_| "expected choice to be between 0 and 255")
+    }
+});
+
+foreign_class!(
+/// Wrapper over a collection of transactions produced by the Convert method
+#[derive(Clone)]
+class Conversion {
+    self_type Conversion;
+    private constructor Conversion::new(n: i64) -> Result<Conversion, &'static str> {
+        Err("Conversion is not expected to be constructed outside native code")
+    }
+});
+
+foreign_enum!(
+    enum PayloadType {
+        PUBLIC = PayloadType::Public,
+    }
+);
+
+foreign_class!(
+/// Value type, internally is represented as a 64-bit unsigned integer
+#[derive(Clone)]
+class Proposal {
+    self_type Proposal;
+    private constructor Proposal::new(vote_plan_id: VotePlanId, payload_type: PayloadType, index: i16, options: Options) -> Proposal {
+        Proposal::new(vote_plan_id, payload_type, index as u8, options)
+    }
+});
+
+foreign_class!(
+/// Value type, internally is represented as a 64-bit unsigned integer
+#[derive(Clone)]
+class VotePlanId {
+    self_type Proposal;
+    private constructor VotePlanId::new(bytes: &[i8]) -> Result<VotePlanId, String> {
+        VotePlanId::try_from(i8_to_u8(bytes)).map_err(|e| e.to_string())
+    }
+});
+
+foreign_class!(
+/// Value type, internally is represented as a 64-bit unsigned integer
+#[derive(Clone)]
+class Options {
+    self_type Options;
+    constructor Options::new_length(num_choices: i16) -> Result<Options, String> {
+        Options::new_length(num_choices as u8).map_err(|e| e.to_string())
+    }
+});
+
+// utility functions to cast slices. The important part here is that they
+// produce bounded lifetimes
+fn u8_to_i8<'a>(input: &'a [u8]) -> &'a [i8] {
+    unsafe {
+        std::slice::from_raw_parts(input.as_ref().as_ptr() as *const i8, input.as_ref().len())
+    }
+}
+
+fn i8_to_u8<'a>(input: &'a [i8]) -> &'a [u8] {
+    unsafe {
+        std::slice::from_raw_parts(input.as_ref().as_ptr() as *const u8, input.as_ref().len())
+    }
+}

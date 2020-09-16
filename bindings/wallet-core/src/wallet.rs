@@ -10,7 +10,7 @@ use chain_impl_mockchain::{
     vote::Choice,
 };
 use chain_ser::mempack::{ReadBuf, Readable as _};
-use wallet::{AccountId, Settings};
+pub use wallet::{AccountId, Settings};
 
 /// the wallet
 ///

@@ -10,7 +10,7 @@ pub use self::{
     vote::Proposal,
     wallet::Wallet,
 };
-pub use ::wallet::Settings;
+pub use ::wallet::{AccountId, Settings};
 pub use chain_impl_mockchain::{
     value::Value,
     vote::{Choice, Options, PayloadType},

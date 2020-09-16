@@ -83,6 +83,10 @@ impl AccountId {
     /// the total size of an account ID
     pub const SIZE: usize = ed25519::PUBLIC_KEY_LENGTH;
 
+    pub fn from_raw(public_key: [u8; Self::SIZE]) -> Self {
+        Self { id: public_key }
+    }
+
     /// get the public address associated to this account identifier
     pub fn address(&self, discrimination: Discrimination) -> Address {
         let pk = if let Ok(pk) = PublicKey::from_binary(&self.id) {
