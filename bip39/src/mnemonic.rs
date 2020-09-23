@@ -65,6 +65,10 @@ impl MnemonicString {
 
         Ok(MnemonicString(s))
     }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        self.0.as_bytes()
+    }
 }
 
 impl MnemonicIndex {
@@ -201,13 +205,6 @@ impl Mnemonics {
 impl AsRef<[MnemonicIndex]> for Mnemonics {
     fn as_ref(&self) -> &[MnemonicIndex] {
         &self.0[..]
-    }
-}
-
-impl Deref for MnemonicString {
-    type Target = str;
-    fn deref(&self) -> &Self::Target {
-        self.0.deref()
     }
 }
 
