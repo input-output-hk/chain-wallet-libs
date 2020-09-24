@@ -1,6 +1,4 @@
-//! This module expose handy C compatible functions to reuse in the different
-//! C style bindings that we have (wallet-c, wallet-jni...)
-
+use super::commons::NulPtr;
 use crate::{Conversion, Error, Proposal, Result, Wallet};
 use chain_impl_mockchain::{
     certificate::VotePlanId,
@@ -9,7 +7,6 @@ use chain_impl_mockchain::{
     vote::{Choice, Options as VoteOptions, PayloadType},
 };
 use std::convert::{TryFrom, TryInto};
-
 use thiserror::Error;
 pub use wallet::Settings;
 
@@ -21,36 +18,12 @@ pub type ErrorPtr = *mut Error;
 pub type PendingTransactionsPtr = *mut PendingTransactions;
 
 #[derive(Debug, Error)]
-#[error("null pointer")]
-struct NulPtr;
-
-#[derive(Debug, Error)]
 #[error("access out of bound")]
 struct OutOfBound;
 
 /// opaque handle over a list of pending transaction ids
 pub struct PendingTransactions {
     fragment_ids: Box<[chain_impl_mockchain::fragment::FragmentId]>,
-}
-
-macro_rules! non_null {
-    ( $obj:expr ) => {
-        if let Some(obj) = $obj.as_ref() {
-            obj
-        } else {
-            return Error::invalid_input(stringify!($expr)).with(NulPtr).into();
-        }
-    };
-}
-
-macro_rules! non_null_mut {
-    ( $obj:expr ) => {
-        if let Some(obj) = $obj.as_mut() {
-            obj
-        } else {
-            return Error::invalid_input(stringify!($expr)).with(NulPtr).into();
-        }
-    };
 }
 
 pub const FRAGMENT_ID_LENGTH: usize = 32;
@@ -700,55 +673,6 @@ pub unsafe fn wallet_vote_cast(
     Result::success()
 }
 
-/// decrypt payload of the wallet transfer protocol
-///
-/// Parameters
-///
-/// password: byte buffer with the encryption password
-/// password_length: length of the password buffer
-/// ciphertext: byte buffer with the encryption password
-/// ciphertext_length: length of the password buffer
-/// plaintext_out: used to return a pointer to a byte buffer with the decrypted text
-/// plaintext_out_length: used to return the length of decrypted text
-///
-/// The returned buffer is in the heap, so make sure to call the delete_buffer function
-///
-/// # Safety
-///
-/// This function dereference raw pointers. Even though the function checks if
-/// the pointers are null. Mind not to put random values in or you may see
-/// unexpected behaviors.
-pub unsafe fn symmetric_cipher_decrypt(
-    password: *const u8,
-    password_length: usize,
-    ciphertext: *const u8,
-    ciphertext_length: usize,
-    plaintext_out: *mut *const u8,
-    plaintext_out_length: *mut usize,
-) -> Result {
-    let password = non_null!(password);
-    let ciphertext = non_null!(ciphertext);
-
-    let password = std::slice::from_raw_parts(password, password_length);
-    let ciphertext = std::slice::from_raw_parts(ciphertext, ciphertext_length);
-
-    match symmetric_cipher::decrypt(password, ciphertext) {
-        Ok(plaintext) => {
-            let len = plaintext.len();
-            let ptr = Box::into_raw(plaintext);
-
-            let out_len = non_null_mut!(plaintext_out_length);
-            let out = non_null_mut!(plaintext_out);
-
-            *out_len = len;
-            *out = ptr as *const u8;
-
-            Result::success()
-        }
-        Err(err) => Error::symmetric_cipher_error(err).into(),
-    }
-}
-
 /// delete the pointer and free the allocated memory
 pub fn wallet_delete_error(error: ErrorPtr) {
     if !error.is_null() {
@@ -791,21 +715,5 @@ pub fn wallet_delete_proposal(proposal: ProposalPtr) {
         let boxed = unsafe { Box::from_raw(proposal) };
 
         std::mem::drop(boxed);
-    }
-}
-
-/// Delete a binary buffer that was returned by this library alongside with its
-/// length.
-///
-/// # Safety
-///
-/// This function dereference raw pointers. Even though
-/// the function checks if the pointers are null. Mind not to put random values
-/// in or you may see unexpected behaviors
-pub unsafe fn delete_buffer(ptr: *mut u8, length: usize) {
-    if !ptr.is_null() {
-        let data = std::slice::from_raw_parts_mut(ptr, length);
-        let data = Box::from_raw(data as *mut [u8]);
-        std::mem::drop(data);
     }
 }

@@ -57,6 +57,9 @@ pub enum ErrorCode {
 
     /// authentication failed
     SymmetricCipherInvalidPassword = 7,
+
+    /// bip39 error
+    Bip39Error = 8,
 }
 
 #[derive(Debug)]
@@ -86,6 +89,9 @@ pub enum ErrorKind {
 
     /// authentication failed
     SymmetricCipherInvalidPassword,
+
+    /// bip39 error
+    Bip39Error,
 }
 
 impl ErrorKind {
@@ -102,6 +108,7 @@ impl ErrorKind {
             Self::WalletTransactionBuilding => ErrorCode::WalletTransactionBuilding,
             Self::SymmetricCipherError => ErrorCode::SymmetricCipherError,
             Self::SymmetricCipherInvalidPassword => ErrorCode::SymmetricCipherInvalidPassword,
+            Self::Bip39Error => ErrorCode::Bip39Error,
         }
     }
 }
@@ -193,6 +200,13 @@ impl Error {
         Self {
             kind,
             details: None,
+        }
+    }
+
+    pub fn bip39_error(err: bip39::Error) -> Self {
+        Self {
+            kind: ErrorKind::Bip39Error,
+            details: Some(Box::new(err)),
         }
     }
 
@@ -337,6 +351,7 @@ impl Display for ErrorKind {
             ),
             Self::SymmetricCipherError => f.write_str("malformed encryption or decryption payload"),
             Self::SymmetricCipherInvalidPassword => f.write_str("invalid decryption password"),
+            Self::Bip39Error => f.write_str("bip39 operation error"),
         }
     }
 }

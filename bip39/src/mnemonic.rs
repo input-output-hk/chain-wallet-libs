@@ -1,5 +1,5 @@
 use crate::{dictionary, Error, Result, Type};
-use std::{fmt, ops::Deref, str};
+use std::{fmt, str};
 
 /// the maximum authorized value for a mnemonic. i.e. 2047
 pub const MAX_MNEMONIC_VALUE: u16 = 2047;
@@ -64,6 +64,19 @@ impl MnemonicString {
         let _ = Mnemonics::from_string(dic, &s)?;
 
         Ok(MnemonicString(s))
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        self.0.as_bytes()
+    }
+
+    /// Consume the MnemonicString getting a byte representation, primarily
+    /// useful for ffi.
+    /// Security: Take into account that this prevents the Drop implementation
+    /// from running, which means the memory is not cleared
+    pub fn into_boxed_slice(mut self) -> Box<[u8]> {
+        let mnemonics = std::mem::replace(&mut self.0, String::new());
+        mnemonics.into_boxed_str().into_boxed_bytes()
     }
 }
 
@@ -201,13 +214,6 @@ impl Mnemonics {
 impl AsRef<[MnemonicIndex]> for Mnemonics {
     fn as_ref(&self) -> &[MnemonicIndex] {
         &self.0[..]
-    }
-}
-
-impl Deref for MnemonicString {
-    type Target = str;
-    fn deref(&self) -> &Self::Target {
-        self.0.deref()
     }
 }
 
