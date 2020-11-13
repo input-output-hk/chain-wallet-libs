@@ -85,3 +85,15 @@ fn sign_verify() {
 
     assert!(key.public().verify(&signature, &msg));
 }
+
+#[wasm_bindgen_test]
+fn secret_from_bech32() {
+    let key = "ed25519e_sk12pet86gldawkt2pn3faqu8jyj5gnj9j5n7g5sgn4p4tdlqe723wdudezxjx9srttww4qm5c5emajfzwt7rglv6lyp7eyj4kf9d6jtfc7t9rpn";
+    Ed25519ExtendedPrivate::from_bech32(key).unwrap();
+}
+
+#[wasm_bindgen_test]
+fn public_from_bech32() {
+    let key = "ed25519_pk1c2mlmyn968lhy57cdq3yvjedp0fczhkuau2r2paws9t4kl6kfa0s39ysys";
+    Ed25519Public::from_bech32(key).unwrap();
+}
