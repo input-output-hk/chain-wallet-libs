@@ -1,0 +1,15 @@
+[package]
+name = "wallet-py"
+version = "0.1.0"
+authors = ["Daniel Sanchez Quiros <daniel.sanchez@iohk.io>"]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["cdylib"]
+name = "pyjormungandrwallet"
+
+[dependencies]
+pyo3 = { version = "0.11.1", features = ["extension-module"]}
+wallet-core = { path = "../wallet-core" }
