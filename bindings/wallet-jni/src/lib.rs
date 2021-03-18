@@ -1,9 +1,139 @@
-use jni::objects::{JClass, JObject, JString, JValue};
-use jni::sys::{jbyte, jbyteArray, jint, jlong};
-use jni::JNIEnv;
+use jni::objects::{GlobalRef, JClass, JObject, JStaticFieldID, JString, JThrowable, JValue};
+use jni::sys::{jbyte, jbyteArray, jfieldID, jint, jlong, jmethodID};
+use jni::{JNIEnv, JavaVM};
 use std::convert::TryInto;
+use std::ffi::c_void;
 use std::ptr::{null, null_mut};
 use wallet_core::c::*;
+use wallet_core::{Error, ErrorKind};
+
+static mut EXCEPTION_CLASS: Option<GlobalRef> = None;
+static mut EXCEPTION_CLASS_CONSTRUCTOR_ID: Option<jmethodID> = None;
+static mut ERROR_CODE_CLASS: Option<GlobalRef> = None;
+
+static mut INVALID_INPUT: Option<jfieldID> = None;
+static mut WALLET_RECOVERING: Option<jfieldID> = None;
+static mut WALLET_CONVERSION: Option<jfieldID> = None;
+static mut WALLET_VOTE_OUT_OF_RANGE: Option<jfieldID> = None;
+static mut WALLET_TRANSACTION_BUILDING: Option<jfieldID> = None;
+static mut SYMMETRIC_CIPHER_ERROR: Option<jfieldID> = None;
+static mut SYMMETRIC_CIPHER_INVALID_PASSWORD: Option<jfieldID> = None;
+static mut INVALID_VOTE_ENCRYPTION_KEY: Option<jfieldID> = None;
+
+macro_rules! init_static_error {
+    ($env:expr, $error_class:expr $(, $x:ident)* ) => {
+            $(
+        $x = Some(
+            $env.get_static_field_id(
+                $error_class,
+                stringify!($x),
+                "Lcom/iohk/jormungandrwallet/ErrorCode;",
+            )?
+            .into_inner(),
+        );
+            )*
+    };
+}
+
+#[no_mangle]
+pub unsafe extern "system" fn JNI_OnLoad(
+    vm: *mut jni::sys::JavaVM,
+    _reserved: *mut c_void,
+) -> jint {
+    let res: jni::errors::Result<()> = (|| {
+        let vm = JavaVM::from_raw(vm)?;
+
+        let env = vm.get_env()?;
+
+        let exception_class =
+            env.find_class("com/iohk/jormungandrwallet/JormungandrWalletException")?;
+
+        EXCEPTION_CLASS = Some(env.new_global_ref(exception_class)?);
+
+        EXCEPTION_CLASS_CONSTRUCTOR_ID = Some(
+            env.get_method_id(
+                exception_class,
+                "<init>",
+                "(Ljava/lang/String;Lcom/iohk/jormungandrwallet/ErrorCode;)V",
+            )?
+            .into_inner(),
+        );
+
+        env.delete_local_ref(*exception_class).unwrap();
+
+        let error_code_class = env.find_class("com/iohk/jormungandrwallet/ErrorCode")?;
+
+        ERROR_CODE_CLASS = Some(env.new_global_ref(error_code_class)?);
+
+        init_static_error!(
+            env,
+            error_code_class,
+            INVALID_INPUT,
+            WALLET_RECOVERING,
+            WALLET_CONVERSION,
+            WALLET_VOTE_OUT_OF_RANGE,
+            WALLET_TRANSACTION_BUILDING,
+            SYMMETRIC_CIPHER_ERROR,
+            SYMMETRIC_CIPHER_INVALID_PASSWORD,
+            INVALID_VOTE_ENCRYPTION_KEY
+        );
+
+        env.delete_local_ref(*error_code_class)
+    })();
+
+    match res {
+        Ok(_) => jni::sys::JNI_VERSION_1_1,
+        Err(_) => jni::sys::JNI_ERR,
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "system" fn JNI_OnUnload(
+    _vm: *mut jni::sys::JavaVM,
+    _reserved: *mut c_void,
+) -> jint {
+    // release gc pin on global refs
+    // I actually don't know how much does this matter, but just in case
+    EXCEPTION_CLASS = None;
+    ERROR_CODE_CLASS = None;
+
+    jni::sys::JNI_VERSION_1_1
+}
+
+unsafe fn throw_custom_exception(env: &JNIEnv, error: &Error) -> jni::errors::Result<()> {
+    let error_field_id: JStaticFieldID = match error.kind() {
+        ErrorKind::InvalidInput { .. } => INVALID_INPUT,
+        ErrorKind::WalletRecovering => WALLET_RECOVERING,
+        ErrorKind::WalletConversion => WALLET_CONVERSION,
+        ErrorKind::WalletVoteOutOfRange => WALLET_VOTE_OUT_OF_RANGE,
+        ErrorKind::WalletTransactionBuilding => WALLET_TRANSACTION_BUILDING,
+        ErrorKind::SymmetricCipherError => SYMMETRIC_CIPHER_ERROR,
+        ErrorKind::SymmetricCipherInvalidPassword => SYMMETRIC_CIPHER_INVALID_PASSWORD,
+        ErrorKind::InvalidVoteEncryptionKey => INVALID_VOTE_ENCRYPTION_KEY,
+    }
+    .unwrap()
+    .into();
+
+    let error_code = env.get_static_field_unchecked(
+        ERROR_CODE_CLASS.as_ref().unwrap(),
+        error_field_id,
+        "Lcom/iohk/jormungandrwallet/ErrorCode;".parse().unwrap(),
+    )?;
+
+    let message = env.new_string(error.to_string())?;
+
+    let object: JThrowable = env
+        .new_object_unchecked(
+            EXCEPTION_CLASS.as_ref().unwrap(),
+            EXCEPTION_CLASS_CONSTRUCTOR_ID.map(Into::into).unwrap(),
+            &[JValue::Object(*message), error_code],
+        )?
+        .into();
+
+    let _ = env.throw(object);
+
+    Ok(())
+}
 
 ///
 /// # Safety
@@ -27,7 +157,7 @@ pub unsafe extern "system" fn Java_com_iohk_jormungandrwallet_Wallet_recover(
     let result = wallet_recover(&mnemonics_j.to_string_lossy(), null(), 0, wallet_ptr);
 
     if let Some(error) = result.error() {
-        let _ = env.throw(error.to_string());
+        let _ = throw_custom_exception(&env, error);
         0
     } else {
         wallet as jlong
@@ -100,7 +230,7 @@ pub unsafe extern "system" fn Java_com_iohk_jormungandrwallet_Wallet_importKeys(
     );
 
     if let Some(error) = result.error() {
-        let _ = env.throw(error.to_string());
+        let _ = throw_custom_exception(&env, error);
         0
     } else {
         wallet as jlong
@@ -157,7 +287,7 @@ pub unsafe extern "system" fn Java_com_iohk_jormungandrwallet_Wallet_totalValue(
         let result = wallet_total_value(wallet_ptr, &mut value);
 
         if let Some(error) = result.error() {
-            let _ = env.throw(error.to_string());
+            let _ = throw_custom_exception(&env, error);
         }
     }
     value as jint
@@ -190,7 +320,7 @@ pub unsafe extern "system" fn Java_com_iohk_jormungandrwallet_Wallet_initialFund
         let result =
             wallet_retrieve_funds(wallet_ptr, bytes.as_ptr() as *const u8, len, settings_ptr);
         if let Some(error) = result.error() {
-            let _ = env.throw(error.to_string());
+            let _ = throw_custom_exception(&env, error);
         }
     }
     settings as jlong
@@ -220,7 +350,7 @@ pub unsafe extern "system" fn Java_com_iohk_jormungandrwallet_Wallet_id(
     let result = wallet_id(wallet_ptr, id_out.as_mut_ptr() as *mut u8);
 
     if let Some(error) = result.error() {
-        let _ = env.throw(error.to_string());
+        let _ = throw_custom_exception(&env, error);
     } else {
         env.set_byte_array_region(array, 0, &id_out)
             .expect("Couldn't copy array to jvm");
@@ -250,7 +380,7 @@ pub unsafe extern "system" fn Java_com_iohk_jormungandrwallet_Wallet_pendingTran
         let result = wallet_pending_transactions(wallet_ptr, &mut pending_transactions);
 
         if let Some(error) = result.error() {
-            let _ = env.throw(error.to_string());
+            let _ = throw_custom_exception(&env, error);
         }
     }
 
@@ -285,7 +415,7 @@ pub unsafe extern "system" fn Java_com_iohk_jormungandrwallet_Wallet_confirmTran
     if !wallet_ptr.is_null() {
         let result = wallet_confirm_transaction(wallet_ptr, bytes.as_ptr() as *const u8);
         if let Some(error) = result.error() {
-            let _ = env.throw(error.to_string());
+            let _ = throw_custom_exception(&env, error);
         }
     }
 }
@@ -314,7 +444,7 @@ pub unsafe extern "system" fn Java_com_iohk_jormungandrwallet_Wallet_convert(
     );
 
     if let Some(error) = result.error() {
-        let _ = env.throw(error.to_string());
+        let _ = throw_custom_exception(&env, error);
     }
 
     conversion_out as jlong
@@ -386,7 +516,7 @@ pub unsafe extern "system" fn Java_com_iohk_jormungandrwallet_Conversion_transac
                 .expect("Couldn't copy array to jvm");
         }
         Some(error) => {
-            let _ = env.throw(error.to_string());
+            let _ = throw_custom_exception(&env, error);
         }
     };
 
@@ -417,7 +547,7 @@ pub extern "system" fn Java_com_iohk_jormungandrwallet_Conversion_ignored(
     let result = unsafe { wallet_convert_ignored(conversion, &mut value_out, &mut ignored_out) };
 
     if let Some(error) = result.error() {
-        let _ = env.throw(error.to_string());
+        let _ = unsafe { throw_custom_exception(&env, error) };
     }
 
     let result = env.call_method(
@@ -466,7 +596,7 @@ pub extern "system" fn Java_com_iohk_jormungandrwallet_Wallet_setState(
     let r = wallet_set_state(wallet, value as u64, counter as u32);
 
     if let Some(error) = r.error() {
-        let _ = env.throw(error.to_string());
+        let _ = unsafe { throw_custom_exception(&env, error) };
     }
 }
 
@@ -520,7 +650,7 @@ pub extern "system" fn Java_com_iohk_jormungandrwallet_Proposal_withPublicPayloa
     };
 
     if let Some(error) = r.error() {
-        let _ = env.throw(error.to_string());
+        let _ = unsafe { throw_custom_exception(&env, error) };
     }
 
     proposal as jlong
@@ -581,7 +711,7 @@ pub extern "system" fn Java_com_iohk_jormungandrwallet_Proposal_withPrivatePaylo
     };
 
     if let Some(error) = r.error() {
-        let _ = env.throw(error.to_string());
+        let _ = unsafe { throw_custom_exception(&env, error) };
     }
 
     proposal as jlong
@@ -639,7 +769,7 @@ pub extern "system" fn Java_com_iohk_jormungandrwallet_Wallet_voteCast(
     };
 
     if let Some(error) = r.error() {
-        let _ = env.throw(error.to_string());
+        let _ = unsafe { throw_custom_exception(&env, error) };
         return null_mut() as jbyteArray;
     }
 
@@ -674,7 +804,7 @@ pub extern "system" fn Java_com_iohk_jormungandrwallet_PendingTransactions_len(
         let r = unsafe { pending_transactions_len(pending, &mut len) };
 
         if let Some(error) = r.error() {
-            let _ = env.throw(error.to_string());
+            let _ = unsafe { throw_custom_exception(&env, error) };
         }
     }
 
@@ -720,7 +850,7 @@ pub extern "system" fn Java_com_iohk_jormungandrwallet_PendingTransactions_get(
             array
         }
         Some(error) => {
-            let _ = env.throw(error.to_string());
+            let _ = unsafe { throw_custom_exception(&env, error) };
             null_mut()
         }
     }
@@ -795,7 +925,7 @@ pub extern "system" fn Java_com_iohk_jormungandrwallet_SymmetricCipher_decrypt(
             array
         }
         Some(error) => {
-            let _ = env.throw(error.to_string());
+            let _ = unsafe { throw_custom_exception(&env, error) };
             null_mut()
         }
     }
