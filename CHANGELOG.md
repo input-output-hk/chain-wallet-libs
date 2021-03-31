@@ -42,6 +42,10 @@ Add specific package used for daedalus catalyst
 
 - Expose function to decode bech32 to byte array
 
+#### wallet-js
+
+- Add from_bech32 constructors for Secret and Public key.
+
 ## [0.5.0-pre6] - 2020-11-06
 
 ### Changed

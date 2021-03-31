@@ -1,3 +1,4 @@
+use chain_crypto::bech32::Bech32;
 use js_sys::Array;
 use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaCha20Rng;
@@ -311,8 +312,13 @@ macro_rules! impl_public_key {
                 self.0.as_ref().into()
             }
 
+            pub fn from_bech32(bech32_str: &str) -> Result<$name, JsValue> {
+                chain_crypto::PublicKey::<$wrapped_type>::try_from_bech32_str(bech32_str)
+                    .map(Self)
+                    .map_err(|_| JsValue::from_str("invalid bech32 string"))
+            }
+
             pub fn bech32(&self) -> String {
-                use chain_crypto::bech32::Bech32 as _;
                 self.0.to_bech32_str()
             }
 
@@ -358,6 +364,12 @@ macro_rules! impl_secret_key {
                 Ok(Self(chain_crypto::SecretKey::<$wrapped_type>::generate(
                     rng,
                 )))
+            }
+
+            pub fn from_bech32(bech32_str: &str) -> Result<$name, JsValue> {
+                chain_crypto::SecretKey::<$wrapped_type>::try_from_bech32_str(&bech32_str)
+                    .map(Self)
+                    .map_err(|e| JsValue::from_str(&format!("Invalid bech32 {}", e)))
             }
 
             pub fn public(&self) -> $public {
