@@ -14,6 +14,8 @@ library_header_dst = Path("src/ios/LibWallet.h")
 targets = {
     "x86_64-apple-ios": "x86_64",
     "aarch64-apple-ios": "arm64",
+    "aarch64-apple-ios-sim": "arm64",
+
 }
 
 
