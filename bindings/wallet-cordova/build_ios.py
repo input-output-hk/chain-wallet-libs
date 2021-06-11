@@ -11,21 +11,26 @@ root_directory = Path("../../target/")
 library_header_src = Path("../wallet-c/wallet.h")
 library_header_dst = Path("src/ios/LibWallet.h")
 
-targets = {
-    "x86_64-apple-ios": "x86_64",
-    "aarch64-apple-ios": "arm64",
-    "aarch64-apple-ios-sim": "arm64",
 
-}
+__AARCH64_TARGET = {"aarch64-apple-ios": ("arm64", "stable")}
+__AARCH64_TARGET_SIM = {"aarch64-apple-ios-sim": ("arm64", "nightly")}
 
+def run(sim: bool):
+    targets = {
+        "x86_64-apple-ios": ("x86_64", "stable"),
+        **(__AARCH64_TARGET_SIM if sim else __AARCH64_TARGET),
+    }
 
-def run():
-    lipo_args = ["lipo", "-create", "-output", "./src/ios/" + libname]
+    lipo_args = ["lipo", "-create", "-output", f"./src/ios/{libname}"]
 
-    for rust_target, apple_target in targets.items():
+    for rust_target, (apple_target, toolchain) in targets.items():
+        extra_cargo_options = []
+        if toolchain == "nightly":
+            extra_cargo_options = [f"+{toolchain}", "-Z", "build-std"]
         out = subprocess.run(
             [
                 "cargo",
+                *extra_cargo_options,
                 "rustc",
                 "--release",
                 "--target",
@@ -54,4 +59,6 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    # Set flag for emulator compatible lib
+    sim = "--sim" in sys.argv
+    run(sim)
