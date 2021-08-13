@@ -11,6 +11,8 @@ use chain_impl_mockchain::{
 use chain_ser::mempack::{ReadBuf, Readable as _};
 use wallet::{AccountId, Settings};
 
+use std::collections::HashSet;
+
 /// the wallet
 ///
 /// * use the `recover` function to recover the wallet from the mnemonics/password;
@@ -193,22 +195,10 @@ impl Wallet {
     /// TODO: this might need to be updated to have a more user friendly
     ///       API. Currently do this for simplicity
     pub fn pending_transactions(&self) -> Vec<FragmentId> {
-        let mut check = std::collections::HashSet::new();
-        let mut result = vec![];
-
-        for id in self.free_keys.pending_transactions() {
-            if check.insert(*id) {
-                result.push(*id);
-            }
-        }
-
-        for id in self.account.pending_transactions() {
-            if check.insert(*id) {
-                result.push(*id);
-            }
-        }
-
-        result
+        let mut ids = HashSet::new();
+        ids.extend(self.free_keys.pending_transactions());
+        ids.extend(self.account.pending_transactions());
+        ids.into_iter().cloned().collect()
     }
 
     /// remove a given pending transaction returning the associated Inputs
