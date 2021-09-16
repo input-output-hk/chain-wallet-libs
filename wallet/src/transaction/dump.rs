@@ -1,4 +1,7 @@
-use crate::store::{Groupable, UtxoStore};
+use crate::{
+    store::{Groupable, UtxoStore},
+    Wallet as _,
+};
 
 use super::builder::{AddInputStatus, TransactionBuilder};
 use super::witness_builder::{UtxoWitnessBuilder, WitnessBuilder};
@@ -93,7 +96,7 @@ impl<'a> Iterator for DumpFreeKeys<'a> {
         .map(|(tx, ignored)| (Fragment::Transaction(tx), ignored));
 
         if let Some((fragment, _)) = next.as_ref() {
-            self.wallet.check_fragment(&fragment.hash(), fragment);
+            self.wallet.check_fragment(fragment);
         }
 
         next

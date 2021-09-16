@@ -9,7 +9,7 @@ use chain_impl_mockchain::{
     vote::{Choice, Payload},
 };
 use std::convert::TryInto;
-use wallet::RecoveryBuilder;
+use wallet::{RecoveryBuilder, Wallet};
 
 const BLOCK0: &[u8] = include_bytes!("../../test-vectors/block0");
 const ACCOUNT_KEY: &str = include_str!("../../test-vectors/free_keys/key1.prv");
@@ -49,7 +49,7 @@ fn cast_vote() {
     let settings = state.settings().expect("valid initial settings");
 
     for fragment in state.initial_contents() {
-        account.check_fragment(&fragment.hash(), fragment);
+        account.check_fragment(fragment);
         account.confirm(&fragment.hash());
     }
 

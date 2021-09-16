@@ -9,7 +9,7 @@ use chain_impl_mockchain::{
     vote::Choice,
 };
 use chain_ser::mempack::{ReadBuf, Readable as _};
-use wallet::{AccountId, Settings};
+use wallet::{AccountId, AccountWallet, Settings, Wallet as _};
 
 /// the wallet
 ///
@@ -18,7 +18,7 @@ use wallet::{AccountId, Settings};
 ///   then you can use `total_value` to see how much was recovered from the initial block0;
 ///
 pub struct Wallet {
-    account: wallet::Wallet,
+    account: AccountWallet,
     free_keys: wallet::scheme::freeutxo::Wallet,
 }
 
@@ -132,8 +132,8 @@ impl Wallet {
 
         let settings = wallet::Settings::new(&block0).unwrap();
         for fragment in block0.contents.iter() {
-            self.free_keys.check_fragment(&fragment.hash(), fragment);
-            self.account.check_fragment(&fragment.hash(), fragment);
+            self.free_keys.check_fragment(fragment);
+            self.account.check_fragment(fragment);
 
             self.confirm_transaction(fragment.hash());
         }
@@ -166,7 +166,7 @@ impl Wallet {
         let mut for_each = |fragment: Fragment, mut ignored_inputs: Vec<Input>| {
             raws.push(fragment.serialize_as_vec().unwrap());
             ignored.append(&mut ignored_inputs);
-            account.check_fragment(&fragment.hash(), &fragment);
+            account.check_fragment(&fragment);
         };
 
         for (fragment, ignored) in wallet::transaction::dump_free_utxo(

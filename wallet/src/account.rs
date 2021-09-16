@@ -1,6 +1,9 @@
 use super::transaction::AccountWitnessBuilder;
-use crate::scheme::{on_tx_input_and_witnesses, on_tx_output};
 use crate::states::States;
+use crate::{
+    scheme::{on_tx_input_and_witnesses, on_tx_output},
+    WalletState,
+};
 use chain_crypto::{Ed25519, Ed25519Extended, PublicKey, SecretKey};
 use chain_impl_mockchain::{
     account::SpendingCounter,
@@ -11,6 +14,115 @@ use chain_impl_mockchain::{
 pub use hdkeygen::account::AccountId;
 use hdkeygen::account::{Account, Seed};
 use thiserror::Error;
+
+impl WalletState for State {
+    fn value(&self) -> Value {
+        self.value
+    }
+}
+
+impl crate::Wallet for Wallet {
+    type State = State;
+
+    fn get_states(&self) -> &States<FragmentId, Self::State> {
+        &self.state
+    }
+
+    fn get_states_mut(&mut self) -> &mut States<FragmentId, Self::State> {
+        &mut self.state
+    }
+
+    fn new_state(&self, state: &Self::State, fragment: &Fragment) -> (bool, Self::State) {
+        let mut new_value = state.value;
+
+        let mut increment_counter = false;
+        let mut at_least_one_output = false;
+
+        match fragment {
+            Fragment::Initial(_config_params) => {}
+            Fragment::UpdateProposal(_update_proposal) => {}
+            Fragment::UpdateVote(_signed_update) => {}
+            Fragment::OldUtxoDeclaration(_utxos) => {}
+            _ => {
+                on_tx_input_and_witnesses(fragment, |(input, _witness)| {
+                    if let InputEnum::AccountInput(id, input_value) = input.to_enum() {
+                        if self.account_id().as_ref() == id.as_ref() {
+                            new_value = new_value.checked_sub(input_value).expect("value overflow");
+                        }
+                        increment_counter = true;
+                    }
+
+                    // TODO: check monotonicity by signing and comparing
+                    // if let Witness::Account(witness) = witness {
+                    //
+                    // }
+                });
+                on_tx_output(fragment, |(_, output)| {
+                    if output
+                        .address
+                        .public_key()
+                        .map(|pk| *pk == Into::<PublicKey<Ed25519>>::into(self.account_id()))
+                        .unwrap_or(false)
+                    {
+                        new_value = new_value.checked_add(output.value).unwrap();
+                        at_least_one_output = true;
+                    }
+                })
+            }
+        };
+
+        let counter = if increment_counter {
+            state.counter.increment().expect("account counter overflow")
+        } else {
+            state.counter
+        };
+
+        let new_state = State {
+            counter,
+            value: new_value,
+        };
+
+        (at_least_one_output || increment_counter, new_state)
+    }
+
+    fn pending_transactions<'a>(&'a self) -> Box<dyn Iterator<Item = &'a FragmentId> + 'a> {
+        Box::new(
+            self.get_states()
+                .iter()
+                .filter_map(|(k, s)| Some(k).filter(|_| s.is_pending())),
+        )
+    }
+
+    fn confirm(&mut self, fragment_id: &FragmentId) {
+        self.get_states_mut().confirm(fragment_id);
+    }
+
+    fn confirmed_value(&self) -> Value {
+        self.get_states().confirmed_state().state().value()
+    }
+
+    fn unconfirmed_value(&self) -> Option<Value> {
+        let s = self.get_states().last_state();
+
+        Some(s)
+            .filter(|s| !s.is_confirmed())
+            .map(|s| s.state().value())
+    }
+
+    fn check_fragment(&mut self, fragment: &Fragment) -> bool {
+        if self.get_states().contains(&fragment.hash()) {
+            return true;
+        }
+
+        let state = self.get_states().last_state().state();
+
+        let (modified_state, new_state) = self.new_state(state, fragment);
+
+        self.get_states_mut().push(fragment.hash(), new_state);
+
+        modified_state
+    }
+}
 
 pub struct Wallet {
     account: EitherAccount,
@@ -97,46 +209,6 @@ impl Wallet {
         self.state.last_state().state().value
     }
 
-    /// confirm a pending transaction
-    ///
-    /// to only do once it is confirmed a transaction is on chain
-    /// and is far enough in the blockchain history to be confirmed
-    /// as immutable
-    ///
-    pub fn confirm(&mut self, fragment_id: &FragmentId) {
-        self.state.confirm(fragment_id);
-    }
-
-    /// get all the pending transactions of the wallet
-    ///
-    /// If empty it means there's no pending transactions waiting confirmation
-    ///
-    pub fn pending_transactions(&self) -> impl Iterator<Item = &FragmentId> {
-        self.state.unconfirmed_states().map(|(k, _)| k)
-    }
-
-    /// get the confirmed value of the wallet
-    pub fn confirmed_value(&self) -> Value {
-        self.state.confirmed_state().state().value
-    }
-
-    /// get the unconfirmed value of the wallet
-    ///
-    /// if `None`, it means there is no unconfirmed state of the wallet
-    /// and the value can be known from `confirmed_value`.
-    ///
-    /// The returned value is the value we expect to see at some point on
-    /// chain once all transactions are on chain confirmed.
-    pub fn unconfirmed_value(&self) -> Option<Value> {
-        let s = self.state.last_state();
-
-        if s.is_confirmed() {
-            None
-        } else {
-            Some(s.state().value)
-        }
-    }
-
     pub fn new_transaction(&mut self, needed_input: Value) -> Result<WalletBuildTx, Error> {
         let state = self.state.last_state().state();
         let current_counter = state.counter;
@@ -155,67 +227,6 @@ impl Wallet {
             current_counter,
             next_value,
         })
-    }
-
-    pub fn check_fragment(&mut self, fragment_id: &FragmentId, fragment: &Fragment) -> bool {
-        if self.state.contains(fragment_id) {
-            return true;
-        }
-
-        let state = self.state.last_state().state();
-
-        let mut new_value = state.value;
-
-        let mut increment_counter = false;
-        let mut at_least_one_output = false;
-
-        match fragment {
-            Fragment::Initial(_config_params) => {}
-            Fragment::UpdateProposal(_update_proposal) => {}
-            Fragment::UpdateVote(_signed_update) => {}
-            Fragment::OldUtxoDeclaration(_utxos) => {}
-            _ => {
-                on_tx_input_and_witnesses(fragment, |(input, _witness)| {
-                    if let InputEnum::AccountInput(id, input_value) = input.to_enum() {
-                        if self.account_id().as_ref() == id.as_ref() {
-                            new_value = new_value.checked_sub(input_value).expect("value overflow");
-                        }
-                        increment_counter = true;
-                    }
-
-                    // TODO: check monotonicity by signing and comparing
-                    // if let Witness::Account(witness) = witness {
-                    //
-                    // }
-                });
-                on_tx_output(fragment, |(_, output)| {
-                    if output
-                        .address
-                        .public_key()
-                        .map(|pk| *pk == Into::<PublicKey<Ed25519>>::into(self.account_id()))
-                        .unwrap_or(false)
-                    {
-                        new_value = new_value.checked_add(output.value).unwrap();
-                        at_least_one_output = true;
-                    }
-                })
-            }
-        };
-
-        let counter = if increment_counter {
-            state.counter.increment().expect("account counter overflow")
-        } else {
-            state.counter
-        };
-
-        let new_state = State {
-            counter,
-            value: new_value,
-        };
-
-        self.state.push(*fragment_id, new_state);
-
-        at_least_one_output || increment_counter
     }
 }
 

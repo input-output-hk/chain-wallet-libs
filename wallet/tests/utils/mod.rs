@@ -34,6 +34,7 @@ impl State {
         Settings::new(&self.block0)
     }
 
+    #[allow(dead_code)]
     pub fn apply_fragments<'a, F>(&'a mut self, fragments: F) -> Result<(), LedgerError>
     where
         F: IntoIterator<Item = &'a FragmentRaw>,
@@ -53,6 +54,7 @@ impl State {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn get_account_state(
         &self,
         account_id: wallet::AccountId,

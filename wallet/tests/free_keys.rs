@@ -4,7 +4,7 @@ use self::utils::State;
 use chain_crypto::SecretKey;
 use chain_impl_mockchain::value::Value;
 use std::time::SystemTime;
-use wallet::transaction::dump_free_utxo;
+use wallet::{transaction::dump_free_utxo, Wallet as _};
 
 const BLOCK0: &[u8] = include_bytes!("../../test-vectors/block0");
 const ACCOUNT: &str = include_str!("../../test-vectors/free_keys/key1.prv");
@@ -37,8 +37,8 @@ fn test_free_utxo_key_dump() {
     let address = account.account_id().address(settings.discrimination());
 
     for fragment in state.initial_contents() {
-        account.check_fragment(&fragment.hash(), fragment);
-        free_keys.check_fragment(&fragment.hash(), fragment);
+        account.check_fragment(fragment);
+        free_keys.check_fragment(fragment);
 
         account.confirm(&fragment.hash());
         free_keys.confirm(&fragment.hash());
@@ -59,7 +59,7 @@ fn test_free_utxo_key_dump() {
 
     assert!(ignored.is_empty());
 
-    account.check_fragment(&fragment.hash(), &fragment);
+    account.check_fragment(&fragment);
 
     state
         .apply_fragments(&[fragment.to_raw()])
