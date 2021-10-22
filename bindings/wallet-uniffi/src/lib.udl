@@ -1,0 +1,79 @@
+namespace jormungandr_wallet {};
+
+[Error]
+enum Error {
+    "InvalidEncryptionKey", 
+    "MalformedVotePlanId",
+    "CoreError",
+    "MalformedBlock0Hash",
+};
+
+interface Wallet {
+    constructor(sequence<u8> account_key);
+    void set_state(u64 value, u32 counter);
+    [Throws=Error]
+    sequence<u8> vote(Settings settings, Proposal proposal, u8 choice, BlockDate valid_until);
+};
+
+dictionary LinearFee {
+    u64 constant;
+    u64 coefficient;
+    u64 certificate;
+    PerCertificateFee per_certificate_fees;
+    PerVoteCertificateFee per_vote_certificate_fees;
+};
+
+dictionary PerCertificateFee {
+    u64 certificate_pool_registration;
+    u64 certificate_stake_delegation;
+    u64 certificate_owner_stake_delegation;
+};
+
+dictionary PerVoteCertificateFee {
+    u64 certificate_vote_plan;
+    u64 certificate_vote_cast;
+};
+
+enum Discrimination {
+    "Production",
+    "Test",
+};
+
+dictionary TimeEra {
+    u32 epoch_start;
+    u64 slot_start;
+    u32 slots_per_epoch;
+};
+
+dictionary SettingsInit {
+    LinearFee fees;
+    Discrimination discrimination;
+    sequence<u8> block0_hash;
+    u64 block0_date;
+    u8 slot_duration;
+    TimeEra time_era;
+    u8 transaction_max_expiry_epochs;
+};
+
+interface Settings {
+    [Throws=Error]
+    constructor(SettingsInit settings);
+};
+
+dictionary Proposal {
+    sequence<u8> vote_plan_id;
+    u8 index;
+    u8 options;
+    PayloadTypeConfig payload_type;
+};
+
+dictionary BlockDate {
+    u32 epoch;
+    u32 slot;
+};
+
+[Enum]
+interface PayloadTypeConfig {
+  Public();
+  Private(string encryption_key);
+};
