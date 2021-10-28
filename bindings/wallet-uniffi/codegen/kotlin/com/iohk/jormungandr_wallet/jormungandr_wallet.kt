@@ -3,7 +3,7 @@
 
 @file:Suppress("NAME_SHADOWING")
 
-package uniffi.jormungandr_wallet;
+package com.iohk.jormungandr_wallet;
 
 // Common helper code.
 //
@@ -44,15 +44,15 @@ open class RustBuffer : Structure() {
 
     companion object {
         internal fun alloc(size: Int = 0) = rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_cc83_rustbuffer_alloc(size, status)
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_5058_rustbuffer_alloc(size, status)
         }
 
         internal fun free(buf: RustBuffer.ByValue) = rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_cc83_rustbuffer_free(buf, status)
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_5058_rustbuffer_free(buf, status)
         }
 
         internal fun reserve(buf: RustBuffer.ByValue, additional: Int) = rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_cc83_rustbuffer_reserve(buf, additional, status)
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_5058_rustbuffer_reserve(buf, additional, status)
         }
     }
 
@@ -453,43 +453,47 @@ internal interface _UniFFILib : Library {
         }
     }
 
-    fun ffi_jormungandr_wallet_cc83_Wallet_object_free(ptr: Pointer,
+    fun ffi_jormungandr_wallet_5058_Wallet_object_free(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun jormungandr_wallet_cc83_Wallet_new(account_key: RustBuffer.ByValue,
+    fun jormungandr_wallet_5058_Wallet_new(account_key: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Pointer
 
-    fun jormungandr_wallet_cc83_Wallet_set_state(ptr: Pointer,value: Long,counter: Int,
+    fun jormungandr_wallet_5058_Wallet_set_state(ptr: Pointer,value: Long,counter: Int,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun jormungandr_wallet_cc83_Wallet_vote(ptr: Pointer,settings: Pointer,proposal: RustBuffer.ByValue,choice: Byte,valid_until: RustBuffer.ByValue,
+    fun jormungandr_wallet_5058_Wallet_vote(ptr: Pointer,settings: Pointer,proposal: RustBuffer.ByValue,choice: Byte,valid_until: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun ffi_jormungandr_wallet_cc83_Settings_object_free(ptr: Pointer,
+    fun ffi_jormungandr_wallet_5058_Settings_object_free(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun jormungandr_wallet_cc83_Settings_new(settings: RustBuffer.ByValue,
+    fun jormungandr_wallet_5058_Settings_new(settings: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Pointer
 
-    fun ffi_jormungandr_wallet_cc83_rustbuffer_alloc(size: Int,
+    fun jormungandr_wallet_5058_Settings_settings_raw(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun ffi_jormungandr_wallet_cc83_rustbuffer_from_bytes(bytes: ForeignBytes.ByValue,
+    fun ffi_jormungandr_wallet_5058_rustbuffer_alloc(size: Int,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun ffi_jormungandr_wallet_cc83_rustbuffer_free(buf: RustBuffer.ByValue,
+    fun ffi_jormungandr_wallet_5058_rustbuffer_from_bytes(bytes: ForeignBytes.ByValue,
+    uniffi_out_err: RustCallStatus
+    ): RustBuffer.ByValue
+
+    fun ffi_jormungandr_wallet_5058_rustbuffer_free(buf: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun ffi_jormungandr_wallet_cc83_rustbuffer_reserve(buf: RustBuffer.ByValue,additional: Int,
+    fun ffi_jormungandr_wallet_5058_rustbuffer_reserve(buf: RustBuffer.ByValue,additional: Int,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
@@ -772,29 +776,29 @@ interface CallStatusErrorHandler<E> {
     fun lift(error_buf: RustBuffer.ByValue): E;
 }
 
-// Error Error
+// Error WalletError
 
-sealed class Exception(message: String): Exception(message)  {
+sealed class WalletException(message: String): Exception(message)  {
         // Each variant is a nested class
         // Flat enums carries a string error message, so no special implementation is necessary.
-        class InvalidEncryptionKey(message: String) : Exception(message)
-        class MalformedVotePlanId(message: String) : Exception(message)
-        class CoreException(message: String) : Exception(message)
-        class MalformedBlock0Hash(message: String) : Exception(message)
+        class InvalidEncryptionKey(message: String) : WalletException(message)
+        class MalformedVotePlanId(message: String) : WalletException(message)
+        class CoreException(message: String) : WalletException(message)
+        class MalformedBlock0Hash(message: String) : WalletException(message)
         
 
-    companion object ErrorHandler : CallStatusErrorHandler<Exception> {
-        override fun lift(error_buf: RustBuffer.ByValue): Exception {
+    companion object ErrorHandler : CallStatusErrorHandler<WalletException> {
+        override fun lift(error_buf: RustBuffer.ByValue): WalletException {
             return liftFromRustBuffer(error_buf) { error_buf -> read(error_buf) }
         }
 
-        fun read(error_buf: ByteBuffer): Exception {
+        fun read(error_buf: ByteBuffer): WalletException {
             
                 return when(error_buf.getInt()) {
-                1 -> Exception.InvalidEncryptionKey(String.read(error_buf))
-                2 -> Exception.MalformedVotePlanId(String.read(error_buf))
-                3 -> Exception.CoreException(String.read(error_buf))
-                4 -> Exception.MalformedBlock0Hash(String.read(error_buf))
+                1 -> WalletException.InvalidEncryptionKey(String.read(error_buf))
+                2 -> WalletException.MalformedVotePlanId(String.read(error_buf))
+                3 -> WalletException.CoreException(String.read(error_buf))
+                4 -> WalletException.MalformedBlock0Hash(String.read(error_buf))
                 else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
             }
         }
@@ -1143,8 +1147,8 @@ class Wallet(
 ) : FFIObject(pointer), WalletInterface {
     constructor(accountKey: List<UByte> ) :
         this(
-    rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_cc83_Wallet_new(lowerSequenceu8(accountKey) ,status)
+    rustCallWithError(WalletException) { status ->
+    _UniFFILib.INSTANCE.jormungandr_wallet_5058_Wallet_new(lowerSequenceu8(accountKey) ,status)
 })
 
     /**
@@ -1157,7 +1161,7 @@ class Wallet(
      */
     override protected fun freeRustArcPtr() {
         rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_cc83_Wallet_object_free(this.pointer, status)
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_5058_Wallet_object_free(this.pointer, status)
         }
     }
 
@@ -1172,14 +1176,14 @@ class Wallet(
     override fun setState(value: ULong, counter: UInt ) =
         callWithPointer {
     rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_cc83_Wallet_set_state(it, value.lower(), counter.lower() , status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_5058_Wallet_set_state(it, value.lower(), counter.lower() , status)
 }
         }
     
     override fun vote(settings: Settings, proposal: Proposal, choice: UByte, validUntil: BlockDate ): List<UByte> =
         callWithPointer {
-    rustCallWithError(Exception) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_cc83_Wallet_vote(it, settings.lower(), proposal.lower(), choice.lower(), validUntil.lower() , status)
+    rustCallWithError(WalletException) { status ->
+    _UniFFILib.INSTANCE.jormungandr_wallet_5058_Wallet_vote(it, settings.lower(), proposal.lower(), choice.lower(), validUntil.lower() , status)
 }
         }.let {
             liftSequenceu8(it)
@@ -1204,6 +1208,7 @@ class Wallet(
 
 @ExperimentalUnsignedTypes
 public interface SettingsInterface {
+    fun settingsRaw(): SettingsInit
     
 }
 
@@ -1213,8 +1218,8 @@ class Settings(
 ) : FFIObject(pointer), SettingsInterface {
     constructor(settings: SettingsInit ) :
         this(
-    rustCallWithError(Exception) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_cc83_Settings_new(settings.lower() ,status)
+    rustCallWithError(WalletException) { status ->
+    _UniFFILib.INSTANCE.jormungandr_wallet_5058_Settings_new(settings.lower() ,status)
 })
 
     /**
@@ -1227,7 +1232,7 @@ class Settings(
      */
     override protected fun freeRustArcPtr() {
         rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_cc83_Settings_object_free(this.pointer, status)
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_5058_Settings_object_free(this.pointer, status)
         }
     }
 
@@ -1239,6 +1244,15 @@ class Settings(
         buf.putLong(Pointer.nativeValue(this.lower()))
     }
 
+    override fun settingsRaw(): SettingsInit =
+        callWithPointer {
+    rustCall() { status ->
+    _UniFFILib.INSTANCE.jormungandr_wallet_5058_Settings_settings_raw(it,  status)
+}
+        }.let {
+            SettingsInit.lift(it)
+        }
+    
     
 
     companion object {
