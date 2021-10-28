@@ -14,7 +14,7 @@ use wallet_core::Wallet as InnerWallet;
 uniffi_macros::include_scaffolding!("lib");
 
 #[derive(Debug, thiserror::Error)]
-pub enum Error {
+pub enum WalletError {
     #[error("malformed encryption key")]
     InvalidEncryptionKey,
     #[error("malformed voteplan id")]
@@ -93,11 +93,11 @@ pub struct BlockDate {
 }
 
 impl Wallet {
-    pub fn new(account_key: Vec<u8>) -> Self {
-        // the constructor can't return Result... Maybe this needs a different pattern
-        let inner = InnerWallet::recover_free_keys(account_key.as_ref(), &[]).unwrap();
+    pub fn new(account_key: Vec<u8>) -> Result<Self, WalletError> {
+        let inner = InnerWallet::recover_free_keys(account_key.as_ref(), &[])
+            .map_err(WalletError::CoreError)?;
 
-        Self(Mutex::new(inner))
+        Ok(Self(Mutex::new(inner)))
     }
 
     pub fn set_state(&self, value: u64, counter: u32) {
@@ -112,7 +112,7 @@ impl Wallet {
         proposal: Proposal,
         choice: u8,
         valid_until: BlockDate,
-    ) -> Result<Vec<u8>, Error> {
+    ) -> Result<Vec<u8>, WalletError> {
         let settings = settings.0.lock().unwrap();
         let mut wallet = self.0.lock().unwrap();
 
@@ -124,12 +124,12 @@ impl Wallet {
                 &valid_until.into(),
             )
             .map(|bytes| bytes.into_vec())
-            .map_err(Error::from)
+            .map_err(WalletError::from)
     }
 }
 
 impl Settings {
-    pub fn new(settings_init: SettingsInit) -> Result<Self, Error> {
+    pub fn new(settings_init: SettingsInit) -> Result<Self, WalletError> {
         let SettingsInit {
             fees,
             discrimination,
@@ -172,7 +172,7 @@ impl Settings {
 
         let block0_hash: [u8; 32] = block0_hash
             .try_into()
-            .map_err(|_| Error::MalformedBlock0Hash)?;
+            .map_err(|_| WalletError::MalformedBlock0Hash)?;
 
         Ok(Self(Mutex::new(InnerSettings {
             fees: linear_fee,
@@ -197,19 +197,19 @@ impl From<TimeEra> for chain_time::TimeEra {
 }
 
 impl TryFrom<Proposal> for wallet_core::Proposal {
-    type Error = Error;
+    type Error = WalletError;
 
     fn try_from(p: Proposal) -> Result<Self, Self::Error> {
         Ok(wallet_core::Proposal::new(
             VotePlanId::try_from(p.vote_plan_id.as_ref())
-                .map_err(|_| Error::MalformedVotePlanId)?,
+                .map_err(|_| WalletError::MalformedVotePlanId)?,
             p.index,
             Options::new_length(p.options).unwrap(),
             match p.payload_type {
                 PayloadTypeConfig::Public => wallet_core::PayloadTypeConfig::Public,
                 PayloadTypeConfig::Private { encryption_key } => {
                     let encryption_key = ElectionPublicKey::try_from_bech32_str(&encryption_key)
-                        .map_err(|_| Error::InvalidEncryptionKey)?;
+                        .map_err(|_| WalletError::InvalidEncryptionKey)?;
                     wallet_core::PayloadTypeConfig::Private(encryption_key)
                 }
             },

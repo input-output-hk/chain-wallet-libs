@@ -1,7 +1,7 @@
 namespace jormungandr_wallet {};
 
 [Error]
-enum Error {
+enum WalletError {
     "InvalidEncryptionKey", 
     "MalformedVotePlanId",
     "CoreError",
@@ -9,9 +9,10 @@ enum Error {
 };
 
 interface Wallet {
+    [Throws=WalletError]
     constructor(sequence<u8> account_key);
     void set_state(u64 value, u32 counter);
-    [Throws=Error]
+    [Throws=WalletError]
     sequence<u8> vote(Settings settings, Proposal proposal, u8 choice, BlockDate valid_until);
 };
 
@@ -56,7 +57,7 @@ dictionary SettingsInit {
 };
 
 interface Settings {
-    [Throws=Error]
+    [Throws=WalletError]
     constructor(SettingsInit settings);
 };
 
