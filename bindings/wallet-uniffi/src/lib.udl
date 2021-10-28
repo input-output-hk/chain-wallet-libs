@@ -59,6 +59,7 @@ dictionary SettingsInit {
 interface Settings {
     [Throws=WalletError]
     constructor(SettingsInit settings);
+    SettingsInit settings_raw();
 };
 
 dictionary Proposal {

@@ -184,6 +184,72 @@ impl Settings {
             transaction_max_expiry_epochs,
         })))
     }
+
+    pub fn settings_raw(&self) -> SettingsInit {
+        let guard = self.0.lock().unwrap();
+
+        SettingsInit {
+            fees: LinearFee {
+                constant: guard.fees.constant,
+                coefficient: guard.fees.coefficient,
+                certificate: guard.fees.certificate,
+                per_certificate_fees: PerCertificateFee {
+                    certificate_pool_registration: guard
+                        .fees
+                        .per_certificate_fees
+                        .certificate_pool_registration
+                        .map(NonZeroU64::get)
+                        .unwrap_or(0),
+                    certificate_stake_delegation: guard
+                        .fees
+                        .per_certificate_fees
+                        .certificate_stake_delegation
+                        .map(NonZeroU64::get)
+                        .unwrap_or(0),
+                    certificate_owner_stake_delegation: guard
+                        .fees
+                        .per_certificate_fees
+                        .certificate_owner_stake_delegation
+                        .map(NonZeroU64::get)
+                        .unwrap_or(0),
+                },
+                per_vote_certificate_fees: PerVoteCertificateFee {
+                    certificate_vote_plan: guard
+                        .fees
+                        .per_vote_certificate_fees
+                        .certificate_vote_plan
+                        .map(NonZeroU64::get)
+                        .unwrap_or(0),
+                    certificate_vote_cast: guard
+                        .fees
+                        .per_vote_certificate_fees
+                        .certificate_vote_cast
+                        .map(NonZeroU64::get)
+                        .unwrap_or(0),
+                },
+            },
+            discrimination: match guard.discrimination {
+                chain_addr::Discrimination::Production => Discrimination::Production,
+                chain_addr::Discrimination::Test => Discrimination::Test,
+            },
+            block0_hash: guard
+                .block0_initial_hash
+                .as_bytes()
+                .iter()
+                .cloned()
+                .collect(),
+            block0_date: guard.block0_date.0,
+            slot_duration: guard.slot_duration,
+            time_era: TimeEra {
+                // TODO: expose these things in chain_libs, they are not going to be anything else
+                // than 0 for now, but just in case
+                epoch_start: 0,
+                slot_start: 0,
+                slots_per_epoch: guard.time_era.slots_per_epoch(),
+            },
+            transaction_max_expiry_epochs: guard.transaction_max_expiry_epochs,
+        }
+    }
 }
 
 impl From<TimeEra> for chain_time::TimeEra {
