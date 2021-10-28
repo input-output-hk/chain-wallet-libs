@@ -36,6 +36,23 @@ def create_hello_world(build_dir: Path):
         cwd=build_dir,
     )
 
+def enable_kotlin(app_dir: Path):
+    file = app_dir / "config.xml"
+
+    with open(file, "r") as config:
+        lines = config.readlines()
+
+    with open(file, "w") as config:
+        for line in lines[:-1]:
+            config.write(line)
+
+        config.write('    <preference name="GradlePluginKotlinEnabled" value="true" />')
+        config.write('    <preference name="GradlePluginKotlinCodeStyle" value="official" />')
+        config.write('    <preference name="GradlePluginKotlinVersion" value="1.3.50" />')
+
+        config.write(lines[-1])
+
+
 
 def install_test_framework(app_dir: Path):
     subprocess.check_call(
@@ -105,7 +122,7 @@ if __name__ == "__main__":
         "--platform", required=True, nargs="+", choices=platform_choices
     )
     parser.add_argument("command", choices=["full", "reload-plugin", "reload-tests"])
-    parser.add_argument("-d", "--directory", type=Path)
+    parser.add_argument("-d", "--directory", type=Path, required=True)
     parser.add_argument("-r", "--run", choices=platform_choices)
 
     parser.add_argument("--cargo-build", dest="cargo_build", action="store_true")
@@ -123,6 +140,7 @@ if __name__ == "__main__":
 
     if args.command == "full":
         create_hello_world(build_dir)
+        enable_kotlin(app_dir)
         install_platforms(app_dir, android=android, ios=ios)
         install_test_framework(app_dir)
         install_main_plugin(
