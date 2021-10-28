@@ -20,3 +20,6 @@ thiserror = {version = "1.0", default-features = false}
 
 [build-dependencies]
 uniffi_build = "0.14"
+
+[features]
+builtin-bindgen = ["uniffi_build/builtin-bindgen"]
