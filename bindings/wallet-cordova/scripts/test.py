@@ -36,6 +36,7 @@ def create_hello_world(build_dir: Path):
         cwd=build_dir,
     )
 
+
 def enable_kotlin(app_dir: Path):
     file = app_dir / "config.xml"
 
@@ -47,11 +48,14 @@ def enable_kotlin(app_dir: Path):
             config.write(line)
 
         config.write('    <preference name="GradlePluginKotlinEnabled" value="true" />')
-        config.write('    <preference name="GradlePluginKotlinCodeStyle" value="official" />')
-        config.write('    <preference name="GradlePluginKotlinVersion" value="1.3.50" />')
+        config.write(
+            '    <preference name="GradlePluginKotlinCodeStyle" value="official" />'
+        )
+        config.write(
+            '    <preference name="GradlePluginKotlinVersion" value="1.3.50" />'
+        )
 
         config.write(lines[-1])
-
 
 
 def install_test_framework(app_dir: Path):

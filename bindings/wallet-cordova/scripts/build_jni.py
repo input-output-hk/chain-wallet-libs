@@ -39,7 +39,7 @@ def run(release=True):
             "-p",
             "wallet-uniffi",
             "--features",
-            "builtin-bindgen"
+            "builtin-bindgen",
         ]
 
         if release:
