@@ -14,7 +14,7 @@ PASSWORD[0] = keys.password[0];
 PASSWORD[1] = keys.password[1];
 PASSWORD[2] = keys.password[2];
 PASSWORD[3] = keys.password[3];
-const VOTE_ENCRYPTION_KEY = 'votepk1nc988wtjlrm5k0z43088p0rrvd5yhvc96k7zh99p6w74gupxggtqwym0vm';
+const VOTE_ENCRYPTION_KEY = 'ristretto255_votepk1nc988wtjlrm5k0z43088p0rrvd5yhvc96k7zh99p6w74gupxggtqyx4792';
 
 // TODO: write settings getter for this
 const BLOCK0_DATE = 1586637936;
