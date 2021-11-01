@@ -1,4 +1,12 @@
-namespace jormungandr_wallet {};
+namespace jormungandr_wallet {
+    [Throws=WalletError]
+    BlockDate block_date_from_system_time(Settings settings, u64 unix_epoch);
+    [Throws=WalletError]
+    BlockDate max_expiration_date(Settings settings, u64 current_time);
+
+    [Throws=WalletError]
+    sequence<u8> symmetric_cipher_decrypt(sequence<u8> password, sequence<u8> ciphertext);
+};
 
 [Error]
 enum WalletError {
@@ -6,14 +14,39 @@ enum WalletError {
     "MalformedVotePlanId",
     "CoreError",
     "MalformedBlock0Hash",
+    "MalformedSecretKey",
+    "TimeError",
+    "CipherError",
+    "InvalidFragment",
 };
 
 interface Wallet {
     [Throws=WalletError]
-    constructor(sequence<u8> account_key);
+    constructor(
+        SecretKeyEd25519Extended account_key,
+        sequence<SecretKeyEd25519Extended> utxo_keys
+    );
     void set_state(u64 value, u32 counter);
     [Throws=WalletError]
     sequence<u8> vote(Settings settings, Proposal proposal, u8 choice, BlockDate valid_until);
+    void confirm_transaction(sequence<u8> fragment_id);
+    sequence<sequence<u8>> pending_transactions();
+    sequence<u8> account_id();
+    u32 spending_counter();
+    u64 total_value();
+    [Throws=WalletError]
+    Settings retrieve_funds(sequence<u8> block0);
+};
+
+interface SecretKeyEd25519Extended {
+    [Throws=WalletError]
+    constructor(sequence<u8> raw);
+};
+
+interface Fragment {
+    [Throws=WalletError]
+    constructor(sequence<u8> raw);
+    sequence<u8> id();
 };
 
 dictionary LinearFee {
@@ -46,7 +79,7 @@ dictionary TimeEra {
     u32 slots_per_epoch;
 };
 
-dictionary SettingsInit {
+dictionary SettingsRaw {
     LinearFee fees;
     Discrimination discrimination;
     sequence<u8> block0_hash;
@@ -58,8 +91,8 @@ dictionary SettingsInit {
 
 interface Settings {
     [Throws=WalletError]
-    constructor(SettingsInit settings);
-    SettingsInit settings_raw();
+    constructor(SettingsRaw settings);
+    SettingsRaw settings_raw();
 };
 
 dictionary Proposal {

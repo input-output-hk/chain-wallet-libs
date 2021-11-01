@@ -1,11 +1,17 @@
 use chain_crypto::bech32::Bech32;
+use chain_crypto::Ed25519Extended;
+use chain_crypto::SecretKey;
 use chain_impl_mockchain::certificate::VotePlanId;
 use chain_impl_mockchain::config;
 use chain_impl_mockchain::fee;
+use chain_impl_mockchain::fragment::FragmentRaw;
+use chain_ser::deser::Deserialize;
 use chain_vote::ElectionPublicKey;
 use std::num::NonZeroU64;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::time::Duration;
+use std::time::SystemTime;
 use wallet_core::Error as CoreError;
 use wallet_core::Options;
 use wallet_core::Settings as InnerSettings;
@@ -23,6 +29,14 @@ pub enum WalletError {
     MalformedBlock0Hash,
     #[error("core error {0}")]
     CoreError(#[from] CoreError),
+    #[error("malformed secret key")]
+    MalformedSecretKey,
+    #[error("time error {0}")]
+    TimeError(#[from] wallet::time::Error),
+    #[error("cipher error")]
+    CipherError(#[from] symmetric_cipher::Error),
+    #[error("invalid fragment")]
+    InvalidFragment,
 }
 
 pub struct Wallet(Mutex<InnerWallet>);
@@ -35,6 +49,8 @@ unsafe impl Sync for Wallet {}
 
 pub struct Settings(Mutex<InnerSettings>);
 
+pub struct Fragment(Mutex<FragmentRaw>);
+
 pub struct Proposal {
     pub vote_plan_id: Vec<u8>,
     pub index: u8,
@@ -42,7 +58,7 @@ pub struct Proposal {
     pub payload_type: PayloadTypeConfig,
 }
 
-pub struct SettingsInit {
+pub struct SettingsRaw {
     pub fees: LinearFee,
     pub discrimination: Discrimination,
     pub block0_hash: Vec<u8>,
@@ -92,10 +108,64 @@ pub struct BlockDate {
     slot: u32,
 }
 
+pub struct SecretKeyEd25519Extended(SecretKey<Ed25519Extended>);
+
+pub type FragmentId = Vec<u8>;
+pub type Value = u64;
+pub type AccountId = Vec<u8>;
+
+pub fn block_date_from_system_time(
+    settings: Arc<Settings>,
+    unix_epoch: u64,
+) -> Result<BlockDate, WalletError> {
+    let settings_guard = settings.0.lock().unwrap();
+
+    let time = SystemTime::UNIX_EPOCH + Duration::from_secs(unix_epoch);
+    wallet::time::block_date_from_system_time(&settings_guard, time)
+        .map(From::from)
+        .map_err(From::from)
+}
+
+pub fn max_expiration_date(
+    settings: Arc<Settings>,
+    current_time: u64,
+) -> Result<BlockDate, WalletError> {
+    let settings = settings.0.lock().unwrap();
+    wallet::time::max_expiration_date(
+        &settings,
+        SystemTime::UNIX_EPOCH + Duration::from_secs(current_time),
+    )
+    .map(From::from)
+    .map_err(From::from)
+}
+
+pub fn symmetric_cipher_decrypt(
+    password: Vec<u8>,
+    ciphertext: Vec<u8>,
+) -> Result<Vec<u8>, WalletError> {
+    symmetric_cipher::decrypt(password, ciphertext)
+        .map(|b| b.to_vec())
+        .map_err(From::from)
+}
+
 impl Wallet {
-    pub fn new(account_key: Vec<u8>) -> Result<Self, WalletError> {
-        let inner = InnerWallet::recover_free_keys(account_key.as_ref(), &[])
-            .map_err(WalletError::CoreError)?;
+    pub fn new(
+        account_key: Arc<SecretKeyEd25519Extended>,
+        utxo_keys: Vec<Arc<SecretKeyEd25519Extended>>,
+    ) -> Result<Self, WalletError> {
+        // TODO: change the api of wallet_core::Wallet::recover_free_keys, it's too convoluted and
+        // inflexible
+
+        let utxo_keys: Vec<_> = utxo_keys
+            .iter()
+            .map(|k| <[u8; 64]>::try_from(k.0.clone().leak_secret().as_ref()).unwrap())
+            .collect();
+
+        let inner = InnerWallet::recover_free_keys(
+            account_key.0.clone().leak_secret().as_ref(),
+            utxo_keys.iter(),
+        )
+        .map_err(WalletError::CoreError)?;
 
         Ok(Self(Mutex::new(inner)))
     }
@@ -104,6 +174,25 @@ impl Wallet {
         let mut guard = self.0.lock().unwrap();
 
         guard.set_state(wallet_core::Value(value), counter);
+    }
+
+    pub fn account_id(&self) -> AccountId {
+        self.0.lock().unwrap().id().as_ref().to_vec()
+    }
+
+    pub fn confirm_transaction(&self, id: FragmentId) {
+        let h: [u8; 32] = id.try_into().unwrap();
+        self.0.lock().unwrap().confirm_transaction(h.into())
+    }
+
+    pub fn pending_transactions(&self) -> Vec<FragmentId> {
+        self.0
+            .lock()
+            .unwrap()
+            .pending_transactions()
+            .iter()
+            .map(|f_id| f_id.as_ref().to_vec())
+            .collect()
     }
 
     pub fn vote(
@@ -126,11 +215,29 @@ impl Wallet {
             .map(|bytes| bytes.into_vec())
             .map_err(WalletError::from)
     }
+
+    pub fn spending_counter(&self) -> u32 {
+        let wallet = self.0.lock().unwrap();
+
+        wallet.spending_counter()
+    }
+
+    pub fn total_value(&self) -> Value {
+        self.0.lock().unwrap().total_value().0
+    }
+
+    pub fn retrieve_funds(&self, block0_raw: Vec<u8>) -> Result<Arc<Settings>, WalletError> {
+        let mut wallet = self.0.lock().unwrap();
+
+        let settings = wallet.retrieve_funds(&block0_raw)?;
+
+        Ok(Arc::new(Settings(Mutex::new(settings))))
+    }
 }
 
 impl Settings {
-    pub fn new(settings_init: SettingsInit) -> Result<Self, WalletError> {
-        let SettingsInit {
+    pub fn new(settings_init: SettingsRaw) -> Result<Self, WalletError> {
+        let SettingsRaw {
             fees,
             discrimination,
             block0_hash,
@@ -185,10 +292,10 @@ impl Settings {
         })))
     }
 
-    pub fn settings_raw(&self) -> SettingsInit {
+    pub fn settings_raw(&self) -> SettingsRaw {
         let guard = self.0.lock().unwrap();
 
-        SettingsInit {
+        SettingsRaw {
             fees: LinearFee {
                 constant: guard.fees.constant,
                 coefficient: guard.fees.coefficient,
@@ -232,12 +339,7 @@ impl Settings {
                 chain_addr::Discrimination::Production => Discrimination::Production,
                 chain_addr::Discrimination::Test => Discrimination::Test,
             },
-            block0_hash: guard
-                .block0_initial_hash
-                .as_bytes()
-                .iter()
-                .cloned()
-                .collect(),
+            block0_hash: guard.block0_initial_hash.as_bytes().to_vec(),
             block0_date: guard.block0_date.0,
             slot_duration: guard.slot_duration,
             time_era: TimeEra {
@@ -249,6 +351,29 @@ impl Settings {
             },
             transaction_max_expiry_epochs: guard.transaction_max_expiry_epochs,
         }
+    }
+}
+
+impl SecretKeyEd25519Extended {
+    pub fn new(bytes: Vec<u8>) -> Result<Self, WalletError> {
+        SecretKey::<Ed25519Extended>::from_binary(bytes.as_ref())
+            .map(Self)
+            .map_err(|_| WalletError::MalformedSecretKey)
+    }
+}
+
+impl Fragment {
+    pub fn new(bytes: Vec<u8>) -> Result<Self, WalletError> {
+        let raw =
+            FragmentRaw::deserialize(bytes.as_ref()).map_err(|_| WalletError::InvalidFragment)?;
+
+        Ok(Self(Mutex::new(raw)))
+    }
+
+    pub fn id(&self) -> Vec<u8> {
+        let fraw = self.0.lock().unwrap();
+
+        fraw.id().as_ref().to_vec()
     }
 }
 
@@ -288,6 +413,15 @@ impl From<BlockDate> for chain_impl_mockchain::block::BlockDate {
         chain_impl_mockchain::block::BlockDate {
             epoch: d.epoch,
             slot_id: d.slot,
+        }
+    }
+}
+
+impl From<chain_impl_mockchain::block::BlockDate> for BlockDate {
+    fn from(block_date: chain_impl_mockchain::block::BlockDate) -> Self {
+        BlockDate {
+            epoch: block_date.epoch,
+            slot: block_date.slot_id,
         }
     }
 }
