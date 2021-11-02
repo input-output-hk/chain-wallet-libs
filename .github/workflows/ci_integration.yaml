@@ -156,30 +156,17 @@ jobs:
           - { target: x86_64-linux-android }
 
     steps:
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: ${{ matrix.config.target }}
-          override: true
-          default: true
-
       - name: Checkout code
         uses: actions/checkout@v1
         with:
           submodules: true
-
-      - name: Install cbindgen
-        uses: actions-rs/install@v0.1
-        with:
-          crate: uniffi_bindgen
-          use-tool-cache: true
 
       - name: Build library (release)
         uses: actions-rs/cargo@v1
         with:
           use-cross: true
           command: rustc
-          args: --target ${{ matrix.config.target }} -p wallet-uniffi -- -C link-args=-ldl
+          args: --target ${{ matrix.config.target }} -p wallet-uniffi --features builtin-bindgen -- -C link-args=-ldl
 
       - uses: actions/upload-artifact@v2
         with:
