@@ -145,7 +145,7 @@ jobs:
           args: --release --target ${{ matrix.config.target }} -p jormungandrwallet -- -C lto
 
   build_jni:
-    name: Build jni libs with cross
+    name: Build uniffi jni shared libs for android with cross
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -173,12 +173,12 @@ jobs:
         with:
           use-cross: true
           command: rustc
-          args: --target ${{ matrix.config.target }} -p wallet-jni -- -C link-args=-ldl
+          args: --target ${{ matrix.config.target }} -p wallet-uniffi -- -C link-args=-ldl
 
       - uses: actions/upload-artifact@v2
         with:
           name: jni ${{ matrix.config.target }}
-          path: ./target/${{ matrix.config.target }}/debug/libwallet_jni.so
+          path: ./target/${{ matrix.config.target }}/debug/libuniffi_jormungandr_wallet.so
           retention-days: 1
 
   build_cordova_ios_app:
