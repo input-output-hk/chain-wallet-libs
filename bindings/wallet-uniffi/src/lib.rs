@@ -7,6 +7,7 @@ use chain_impl_mockchain::fee;
 use chain_impl_mockchain::fragment::FragmentRaw;
 use chain_ser::deser::Deserialize;
 use chain_vote::ElectionPublicKey;
+use std::convert::{TryFrom, TryInto};
 use std::num::NonZeroU64;
 use std::sync::Arc;
 use std::sync::Mutex;
