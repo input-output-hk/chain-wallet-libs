@@ -63,6 +63,12 @@ jobs:
             ~/.cargo/git/db
           key: cargo-deps-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Install uniffi
+        uses: actions-rs/install@v0.1
+        with:
+          crate: uniffi_bindgen
+          use-tool-cache: true
+
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -93,6 +99,12 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/git/db
           key: cargo-deps-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install uniffi
+        uses: actions-rs/install@v0.1
+        with:
+          crate: uniffi_bindgen
+          use-tool-cache: true
 
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
