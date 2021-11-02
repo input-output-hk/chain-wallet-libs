@@ -1,3 +1,4 @@
+package com.iohk.jormungandr_wallet;
 
 import android.util.Base64
 import android.util.Log
