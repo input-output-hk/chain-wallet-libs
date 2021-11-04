@@ -23,12 +23,10 @@ import com.sun.jna.Pointer
 import com.sun.jna.Structure
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicReference
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
+import java.util.concurrent.atomic.AtomicLong
 
+// The Rust Buffer and 3 templated methods (alloc, free, reserve).
 // This is a helper for safely working with byte buffers returned from the Rust code.
 // A rust-owned buffer is represented by its capacity, its current length, and a
 // pointer to the underlying data.
@@ -44,15 +42,15 @@ open class RustBuffer : Structure() {
 
     companion object {
         internal fun alloc(size: Int = 0) = rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_5d7_rustbuffer_alloc(size, status)
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_3b39_rustbuffer_alloc(size, status)
         }
 
         internal fun free(buf: RustBuffer.ByValue) = rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_5d7_rustbuffer_free(buf, status)
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_3b39_rustbuffer_free(buf, status)
         }
 
         internal fun reserve(buf: RustBuffer.ByValue, additional: Int) = rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_5d7_rustbuffer_reserve(buf, additional, status)
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_3b39_rustbuffer_reserve(buf, additional, status)
         }
     }
 
@@ -114,8 +112,12 @@ class RustBufferBuilder() {
     }
 
     fun discard() {
-        val rbuf = this.finalize()
-        RustBuffer.free(rbuf)
+        if(this.rbuf.data != null) {
+            // Free the current `RustBuffer`
+            RustBuffer.free(this.rbuf)
+            // Replace it with an empty RustBuffer.
+            this.setRustBuffer(RustBuffer.ByValue())
+        }
     }
 
     internal fun reserve(size: Int, write: (ByteBuffer) -> Unit) {
@@ -175,7 +177,6 @@ class RustBufferBuilder() {
 }
 
 // Helpers for reading primitive data types from a bytebuffer.
-
 internal fun<T> liftFromRustBuffer(rbuf: RustBuffer.ByValue, readItem: (ByteBuffer) -> T): T {
     val buf = rbuf.asByteBuffer()!!
     try {
@@ -201,329 +202,85 @@ internal fun<T> lowerIntoRustBuffer(v: T, writeItem: (T, RustBufferBuilder) -> U
     }
 }
 
-// For every type used in the interface, we provide helper methods for conveniently
-// lifting and lowering that type from C-compatible data, and for reading and writing
-// values of that type in a buffer.
+// A handful of classes and functions to support the generated data structures.
+// This would be a good candidate for isolating in its own ffi-support lib.
+// Error runtime.
+@Structure.FieldOrder("code", "error_buf")
+internal open class RustCallStatus : Structure() {
+    @JvmField var code: Int = 0
+    @JvmField var error_buf: RustBuffer.ByValue = RustBuffer.ByValue()
 
+    fun isSuccess(): Boolean {
+        return code == 0
+    }
 
+    fun isError(): Boolean {
+        return code == 1
+    }
 
-
-@ExperimentalUnsignedTypes
-internal fun UByte.Companion.lift(v: Byte): UByte {
-    return v.toUByte()
-}
-
-@ExperimentalUnsignedTypes
-internal fun UByte.Companion.read(buf: ByteBuffer): UByte {
-    return UByte.lift(buf.get())
-}
-
-@ExperimentalUnsignedTypes
-internal fun UByte.lower(): Byte {
-    return this.toByte()
-}
-
-@ExperimentalUnsignedTypes
-internal fun UByte.write(buf: RustBufferBuilder) {
-    buf.putByte(this.toByte())
-}
-
-
-
-
-
-@ExperimentalUnsignedTypes
-internal fun UInt.Companion.lift(v: Int): UInt {
-    return v.toUInt()
-}
-
-@ExperimentalUnsignedTypes
-internal fun UInt.Companion.read(buf: ByteBuffer): UInt {
-    return UInt.lift(buf.getInt())
-}
-
-@ExperimentalUnsignedTypes
-internal fun UInt.lower(): Int {
-    return this.toInt()
-}
-
-@ExperimentalUnsignedTypes
-internal fun UInt.write(buf: RustBufferBuilder) {
-    buf.putInt(this.toInt())
-}
-
-
-
-
-
-@ExperimentalUnsignedTypes
-internal fun ULong.Companion.lift(v: Long): ULong {
-    return v.toULong()
-}
-
-@ExperimentalUnsignedTypes
-internal fun ULong.Companion.read(buf: ByteBuffer): ULong {
-    return ULong.lift(buf.getLong())
-}
-
-@ExperimentalUnsignedTypes
-internal fun ULong.lower(): Long {
-    return this.toLong()
-}
-
-@ExperimentalUnsignedTypes
-internal fun ULong.write(buf: RustBufferBuilder) {
-    buf.putLong(this.toLong())
-}
-
-
-
-
-
-internal fun String.Companion.lift(rbuf: RustBuffer.ByValue): String {
-    try {
-        val byteArr = ByteArray(rbuf.len)
-        rbuf.asByteBuffer()!!.get(byteArr)
-        return byteArr.toString(Charsets.UTF_8)
-    } finally {
-        RustBuffer.free(rbuf)
+    fun isPanic(): Boolean {
+        return code == 2
     }
 }
 
-internal fun String.Companion.read(buf: ByteBuffer): String {
-    val len = buf.getInt()
-    val byteArr = ByteArray(len)
-    buf.get(byteArr)
-    return byteArr.toString(Charsets.UTF_8)
+class InternalException(message: String) : Exception(message)
+
+// Each top-level error class has a companion object that can lift the error from the call status's rust buffer
+interface CallStatusErrorHandler<E> {
+    fun lift(error_buf: RustBuffer.ByValue): E;
 }
 
-internal fun String.lower(): RustBuffer.ByValue {
-    val byteArr = this.toByteArray(Charsets.UTF_8)
-    // Ideally we'd pass these bytes to `ffi_bytebuffer_from_bytes`, but doing so would require us
-    // to copy them into a JNA `Memory`. So we might as well directly copy them into a `RustBuffer`.
-    val rbuf = RustBuffer.alloc(byteArr.size)
-    rbuf.asByteBuffer()!!.put(byteArr)
-    return rbuf
-}
-
-internal fun String.write(buf: RustBufferBuilder) {
-    val byteArr = this.toByteArray(Charsets.UTF_8)
-    buf.putInt(byteArr.size)
-    buf.put(byteArr)
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Helper functions for pasing values of type List<UByte>
-
-@ExperimentalUnsignedTypes
-internal fun liftSequenceu8(rbuf: RustBuffer.ByValue): List<UByte> {
-    return liftFromRustBuffer(rbuf) { buf ->
-        readSequenceu8(buf)
+// Helpers for calling Rust
+// In practice we usually need to be synchronized to call this safely, so it doesn't
+// synchronize itself
+
+// Call a rust function that returns a Result<>.  Pass in the Error class companion that corresponds to the Err
+private inline fun <U, E: Exception> rustCallWithError(errorHandler: CallStatusErrorHandler<E>, callback: (RustCallStatus) -> U): U {
+    var status = RustCallStatus();
+    val return_value = callback(status)
+    if (status.isSuccess()) {
+        return return_value
+    } else if (status.isError()) {
+        throw errorHandler.lift(status.error_buf)
+    } else if (status.isPanic()) {
+        // when the rust code sees a panic, it tries to construct a rustbuffer
+        // with the message.  but if that code panics, then it just sends back
+        // an empty buffer.
+        if (status.error_buf.len > 0) {
+            throw InternalException(String.lift(status.error_buf))
+        } else {
+            throw InternalException("Rust panic")
+        }
+    } else {
+        throw InternalException("Unknown rust call status: $status.code")
     }
 }
 
-@ExperimentalUnsignedTypes
-internal fun readSequenceu8(buf: ByteBuffer): List<UByte> {
-    val len = buf.getInt()
-    return List<UByte>(len) {
-        UByte.read(buf)
+// CallStatusErrorHandler implementation for times when we don't expect a CALL_ERROR
+object NullCallStatusErrorHandler: CallStatusErrorHandler<InternalException> {
+    override fun lift(error_buf: RustBuffer.ByValue): InternalException {
+        RustBuffer.free(error_buf)
+        return InternalException("Unexpected CALL_ERROR")
     }
 }
 
-@ExperimentalUnsignedTypes
-internal fun lowerSequenceu8(v: List<UByte>): RustBuffer.ByValue {
-    return lowerIntoRustBuffer(v) { v, buf ->
-        writeSequenceu8(v, buf)
-    }
+// Call a rust function that returns a plain value
+private inline fun <U> rustCall(callback: (RustCallStatus) -> U): U {
+    return rustCallWithError(NullCallStatusErrorHandler, callback);
 }
 
-@ExperimentalUnsignedTypes
-internal fun writeSequenceu8(v: List<UByte>, buf: RustBufferBuilder) {
-    buf.putInt(v.size)
-    v.forEach {
-        it.write(buf)
-    }
-}
-
-
-
-
-
-
-
-// Helper functions for pasing values of type List<SecretKeyEd25519Extended>
-
-@ExperimentalUnsignedTypes
-internal fun liftSequenceTypeSecretKeyEd25519Extended(rbuf: RustBuffer.ByValue): List<SecretKeyEd25519Extended> {
-    return liftFromRustBuffer(rbuf) { buf ->
-        readSequenceTypeSecretKeyEd25519Extended(buf)
-    }
-}
-
-@ExperimentalUnsignedTypes
-internal fun readSequenceTypeSecretKeyEd25519Extended(buf: ByteBuffer): List<SecretKeyEd25519Extended> {
-    val len = buf.getInt()
-    return List<SecretKeyEd25519Extended>(len) {
-        SecretKeyEd25519Extended.read(buf)
-    }
-}
-
-@ExperimentalUnsignedTypes
-internal fun lowerSequenceTypeSecretKeyEd25519Extended(v: List<SecretKeyEd25519Extended>): RustBuffer.ByValue {
-    return lowerIntoRustBuffer(v) { v, buf ->
-        writeSequenceTypeSecretKeyEd25519Extended(v, buf)
-    }
-}
-
-@ExperimentalUnsignedTypes
-internal fun writeSequenceTypeSecretKeyEd25519Extended(v: List<SecretKeyEd25519Extended>, buf: RustBufferBuilder) {
-    buf.putInt(v.size)
-    v.forEach {
-        it.write(buf)
-    }
-}
-
-
-
-
-
-
-
-// Helper functions for pasing values of type List<List<UByte>>
-
-@ExperimentalUnsignedTypes
-internal fun liftSequenceSequenceu8(rbuf: RustBuffer.ByValue): List<List<UByte>> {
-    return liftFromRustBuffer(rbuf) { buf ->
-        readSequenceSequenceu8(buf)
-    }
-}
-
-@ExperimentalUnsignedTypes
-internal fun readSequenceSequenceu8(buf: ByteBuffer): List<List<UByte>> {
-    val len = buf.getInt()
-    return List<List<UByte>>(len) {
-        readSequenceu8(buf)
-    }
-}
-
-@ExperimentalUnsignedTypes
-internal fun lowerSequenceSequenceu8(v: List<List<UByte>>): RustBuffer.ByValue {
-    return lowerIntoRustBuffer(v) { v, buf ->
-        writeSequenceSequenceu8(v, buf)
-    }
-}
-
-@ExperimentalUnsignedTypes
-internal fun writeSequenceSequenceu8(v: List<List<UByte>>, buf: RustBufferBuilder) {
-    buf.putInt(v.size)
-    v.forEach {
-        writeSequenceu8(it, buf)
-    }
-}
-
-
-
-
+// Contains loading, initialization code,
+// and the FFI Function declarations in a com.sun.jna.Library.
 @Synchronized
-fun findLibraryName(componentName: String): String {
-    val libOverride = System.getProperty("uniffi.component.${componentName}.libraryOverride")
+private fun findLibraryName(componentName: String): String {
+    val libOverride = System.getProperty("uniffi.component.$componentName.libraryOverride")
     if (libOverride != null) {
         return libOverride
     }
     return "uniffi_jormungandr_wallet"
 }
 
-inline fun <reified Lib : Library> loadIndirect(
+private inline fun <reified Lib : Library> loadIndirect(
     componentName: String
 ): Lib {
     return Native.load<Lib>(findLibraryName(componentName), Lib::class.java)
@@ -534,120 +291,117 @@ inline fun <reified Lib : Library> loadIndirect(
 
 internal interface _UniFFILib : Library {
     companion object {
-        internal val INSTANCE: _UniFFILib by lazy { 
+        internal val INSTANCE: _UniFFILib by lazy {
             loadIndirect<_UniFFILib>(componentName = "jormungandr_wallet")
             
             
         }
     }
 
-    fun ffi_jormungandr_wallet_5d7_Wallet_object_free(ptr: Pointer,
+    fun ffi_jormungandr_wallet_3b39_Wallet_object_free(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun jormungandr_wallet_5d7_Wallet_new(account_key: Pointer,utxo_keys: RustBuffer.ByValue,
+    fun jormungandr_wallet_3b39_Wallet_new(account_key: Pointer,utxo_keys: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Pointer
 
-    fun jormungandr_wallet_5d7_Wallet_set_state(ptr: Pointer,value: Long,counter: Int,
+    fun jormungandr_wallet_3b39_Wallet_set_state(ptr: Pointer,value: Long,counter: Int,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun jormungandr_wallet_5d7_Wallet_vote(ptr: Pointer,settings: Pointer,proposal: RustBuffer.ByValue,choice: Byte,valid_until: RustBuffer.ByValue,
+    fun jormungandr_wallet_3b39_Wallet_vote(ptr: Pointer,settings: Pointer,proposal: RustBuffer.ByValue,choice: Byte,valid_until: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun jormungandr_wallet_5d7_Wallet_confirm_transaction(ptr: Pointer,fragment_id: RustBuffer.ByValue,
+    fun jormungandr_wallet_3b39_Wallet_confirm_transaction(ptr: Pointer,fragment_id: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun jormungandr_wallet_5d7_Wallet_pending_transactions(ptr: Pointer,
+    fun jormungandr_wallet_3b39_Wallet_pending_transactions(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun jormungandr_wallet_5d7_Wallet_account_id(ptr: Pointer,
+    fun jormungandr_wallet_3b39_Wallet_account_id(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun jormungandr_wallet_5d7_Wallet_spending_counter(ptr: Pointer,
+    fun jormungandr_wallet_3b39_Wallet_spending_counter(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): Int
 
-    fun jormungandr_wallet_5d7_Wallet_total_value(ptr: Pointer,
+    fun jormungandr_wallet_3b39_Wallet_total_value(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): Long
 
-    fun jormungandr_wallet_5d7_Wallet_retrieve_funds(ptr: Pointer,block0: RustBuffer.ByValue,
+    fun jormungandr_wallet_3b39_Wallet_retrieve_funds(ptr: Pointer,block0: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Pointer
 
-    fun ffi_jormungandr_wallet_5d7_SecretKeyEd25519Extended_object_free(ptr: Pointer,
+    fun ffi_jormungandr_wallet_3b39_SecretKeyEd25519Extended_object_free(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun jormungandr_wallet_5d7_SecretKeyEd25519Extended_new(raw: RustBuffer.ByValue,
+    fun jormungandr_wallet_3b39_SecretKeyEd25519Extended_new(raw: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Pointer
 
-    fun ffi_jormungandr_wallet_5d7_Fragment_object_free(ptr: Pointer,
+    fun ffi_jormungandr_wallet_3b39_Fragment_object_free(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun jormungandr_wallet_5d7_Fragment_new(raw: RustBuffer.ByValue,
+    fun jormungandr_wallet_3b39_Fragment_new(raw: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Pointer
 
-    fun jormungandr_wallet_5d7_Fragment_id(ptr: Pointer,
+    fun jormungandr_wallet_3b39_Fragment_id(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun ffi_jormungandr_wallet_5d7_Settings_object_free(ptr: Pointer,
+    fun ffi_jormungandr_wallet_3b39_Settings_object_free(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun jormungandr_wallet_5d7_Settings_new(settings: RustBuffer.ByValue,
+    fun jormungandr_wallet_3b39_Settings_new(settings: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Pointer
 
-    fun jormungandr_wallet_5d7_Settings_settings_raw(ptr: Pointer,
+    fun jormungandr_wallet_3b39_Settings_settings_raw(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun jormungandr_wallet_5d7_block_date_from_system_time(settings: Pointer,unix_epoch: Long,
+    fun jormungandr_wallet_3b39_block_date_from_system_time(settings: Pointer,unix_epoch: Long,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun jormungandr_wallet_5d7_max_expiration_date(settings: Pointer,current_time: Long,
+    fun jormungandr_wallet_3b39_max_expiration_date(settings: Pointer,current_time: Long,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun jormungandr_wallet_5d7_symmetric_cipher_decrypt(password: RustBuffer.ByValue,ciphertext: RustBuffer.ByValue,
+    fun jormungandr_wallet_3b39_symmetric_cipher_decrypt(password: RustBuffer.ByValue,ciphertext: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun ffi_jormungandr_wallet_5d7_rustbuffer_alloc(size: Int,
+    fun ffi_jormungandr_wallet_3b39_rustbuffer_alloc(size: Int,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun ffi_jormungandr_wallet_5d7_rustbuffer_from_bytes(bytes: ForeignBytes.ByValue,
+    fun ffi_jormungandr_wallet_3b39_rustbuffer_from_bytes(bytes: ForeignBytes.ByValue,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun ffi_jormungandr_wallet_5d7_rustbuffer_free(buf: RustBuffer.ByValue,
+    fun ffi_jormungandr_wallet_3b39_rustbuffer_free(buf: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun ffi_jormungandr_wallet_5d7_rustbuffer_reserve(buf: RustBuffer.ByValue,additional: Int,
+    fun ffi_jormungandr_wallet_3b39_rustbuffer_reserve(buf: RustBuffer.ByValue,additional: Int,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
     
 }
 
-// A handful of classes and functions to support the generated data structures.
-// This would be a good candidate for isolating in its own ffi-support lib.
-
-
+// Public interface members begin here.
 
 // Interface implemented by anything that can contain an object reference.
 //
@@ -659,6 +413,12 @@ internal interface _UniFFILib : Library {
 // helper method to execute a block and destroy the object at the end.
 interface Disposable {
     fun destroy()
+    companion object {
+        fun destroy(vararg args: Any?) {
+            args.filterIsInstance<Disposable>()
+                .forEach(Disposable::destroy)
+        }
+    }
 }
 
 inline fun <T : Disposable?, R> T.use(block: (T) -> R) =
@@ -758,8 +518,8 @@ abstract class FFIObject(
     protected val pointer: Pointer
 ): Disposable, AutoCloseable {
 
-    val wasDestroyed = AtomicBoolean(false)
-    val callCounter = AtomicLong(1)
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
 
     open protected fun freeRustArcPtr() {
         // To be overridden in subclasses.
@@ -807,15 +567,6 @@ abstract class FFIObject(
 
 
 
-
-
-// Public interface members begin here.
-// Public facing enums
-
-
-
-
-
 enum class Discrimination {
     PRODUCTION,TEST;
 
@@ -839,8 +590,6 @@ enum class Discrimination {
         buf.putInt(this.ordinal + 1)
     }
 }
-
-
 
 
 
@@ -894,114 +643,342 @@ sealed class PayloadTypeConfig  {
     
 }
 
-// Error definitions
-@Structure.FieldOrder("code", "error_buf")
-internal open class RustCallStatus : Structure() {
-    @JvmField var code: Int = 0
-    @JvmField var error_buf: RustBuffer.ByValue = RustBuffer.ByValue()
 
-    fun isSuccess(): Boolean {
-        return code == 0
-    }
 
-    fun isError(): Boolean {
-        return code == 1
-    }
 
-    fun isPanic(): Boolean {
-        return code == 2
-    }
+fun blockDateFromSystemTime(settings: Settings, unixEpoch: ULong ): BlockDate {
+    val _retval = 
+    rustCallWithError(WalletException) { status ->
+    _UniFFILib.INSTANCE.jormungandr_wallet_3b39_block_date_from_system_time(settings.lower(), unixEpoch.lower() ,status)
+}
+    return BlockDate.lift(_retval)
 }
 
-class InternalException(message: String) : Exception(message)
 
-// Each top-level error class has a companion object that can lift the error from the call status's rust buffer
-interface CallStatusErrorHandler<E> {
-    fun lift(error_buf: RustBuffer.ByValue): E;
+
+fun maxExpirationDate(settings: Settings, currentTime: ULong ): BlockDate {
+    val _retval = 
+    rustCallWithError(WalletException) { status ->
+    _UniFFILib.INSTANCE.jormungandr_wallet_3b39_max_expiration_date(settings.lower(), currentTime.lower() ,status)
+}
+    return BlockDate.lift(_retval)
 }
 
-// Error WalletError
 
-sealed class WalletException(message: String): Exception(message)  {
-        // Each variant is a nested class
-        // Flat enums carries a string error message, so no special implementation is necessary.
-        class InvalidEncryptionKey(message: String) : WalletException(message)
-        class MalformedVotePlanId(message: String) : WalletException(message)
-        class CoreException(message: String) : WalletException(message)
-        class MalformedBlock0Hash(message: String) : WalletException(message)
-        class MalformedSecretKey(message: String) : WalletException(message)
-        class TimeException(message: String) : WalletException(message)
-        class CipherException(message: String) : WalletException(message)
-        class InvalidFragment(message: String) : WalletException(message)
+
+fun symmetricCipherDecrypt(password: List<UByte>, ciphertext: List<UByte> ): List<UByte> {
+    val _retval = 
+    rustCallWithError(WalletException) { status ->
+    _UniFFILib.INSTANCE.jormungandr_wallet_3b39_symmetric_cipher_decrypt(lowerSequenceUByte(password), lowerSequenceUByte(ciphertext) ,status)
+}
+    return liftSequenceUByte(_retval)
+}
+
+
+public interface WalletInterface {
+    fun setState(value: ULong, counter: UInt )
+    fun vote(settings: Settings, proposal: Proposal, choice: UByte, validUntil: BlockDate ): List<UByte>
+    fun confirmTransaction(fragmentId: List<UByte> )
+    fun pendingTransactions(): List<List<UByte>>
+    fun accountId(): List<UByte>
+    fun spendingCounter(): UInt
+    fun totalValue(): ULong
+    fun retrieveFunds(block0: List<UByte> ): Settings
+    
+}
+
+class Wallet(
+    pointer: Pointer
+) : FFIObject(pointer), WalletInterface {
+    constructor(accountKey: SecretKeyEd25519Extended, utxoKeys: List<SecretKeyEd25519Extended> ) :
+        this(
+    rustCallWithError(WalletException) { status ->
+    _UniFFILib.INSTANCE.jormungandr_wallet_3b39_Wallet_new(accountKey.lower(), lowerSequenceObjectSecretKeyEd25519Extended(utxoKeys) ,status)
+})
+
+    /**
+     * Disconnect the object from the underlying Rust object.
+     *
+     * It can be called more than once, but once called, interacting with the object
+     * causes an `IllegalStateException`.
+     *
+     * Clients **must** call this method once done with the object, or cause a memory leak.
+     */
+    override protected fun freeRustArcPtr() {
+        rustCall() { status ->
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_3b39_Wallet_object_free(this.pointer, status)
+        }
+    }
+
+    internal fun lower(): Pointer = callWithPointer { it }
+
+    internal fun write(buf: RustBufferBuilder) {
+        // The Rust code always expects pointers written as 8 bytes,
+        // and will fail to compile if they don't fit.
+        buf.putLong(Pointer.nativeValue(this.lower()))
+    }
+
+    override fun setState(value: ULong, counter: UInt ) =
+        callWithPointer {
+    rustCall() { status ->
+    _UniFFILib.INSTANCE.jormungandr_wallet_3b39_Wallet_set_state(it, value.lower(), counter.lower() , status)
+}
+        }
+    
+    override fun vote(settings: Settings, proposal: Proposal, choice: UByte, validUntil: BlockDate ): List<UByte> =
+        callWithPointer {
+    rustCallWithError(WalletException) { status ->
+    _UniFFILib.INSTANCE.jormungandr_wallet_3b39_Wallet_vote(it, settings.lower(), proposal.lower(), choice.lower(), validUntil.lower() , status)
+}
+        }.let {
+            liftSequenceUByte(it)
+        }
+    
+    override fun confirmTransaction(fragmentId: List<UByte> ) =
+        callWithPointer {
+    rustCall() { status ->
+    _UniFFILib.INSTANCE.jormungandr_wallet_3b39_Wallet_confirm_transaction(it, lowerSequenceUByte(fragmentId) , status)
+}
+        }
+    
+    override fun pendingTransactions(): List<List<UByte>> =
+        callWithPointer {
+    rustCall() { status ->
+    _UniFFILib.INSTANCE.jormungandr_wallet_3b39_Wallet_pending_transactions(it,  status)
+}
+        }.let {
+            liftSequenceSequenceUByte(it)
+        }
+    
+    override fun accountId(): List<UByte> =
+        callWithPointer {
+    rustCall() { status ->
+    _UniFFILib.INSTANCE.jormungandr_wallet_3b39_Wallet_account_id(it,  status)
+}
+        }.let {
+            liftSequenceUByte(it)
+        }
+    
+    override fun spendingCounter(): UInt =
+        callWithPointer {
+    rustCall() { status ->
+    _UniFFILib.INSTANCE.jormungandr_wallet_3b39_Wallet_spending_counter(it,  status)
+}
+        }.let {
+            UInt.lift(it)
+        }
+    
+    override fun totalValue(): ULong =
+        callWithPointer {
+    rustCall() { status ->
+    _UniFFILib.INSTANCE.jormungandr_wallet_3b39_Wallet_total_value(it,  status)
+}
+        }.let {
+            ULong.lift(it)
+        }
+    
+    override fun retrieveFunds(block0: List<UByte> ): Settings =
+        callWithPointer {
+    rustCallWithError(WalletException) { status ->
+    _UniFFILib.INSTANCE.jormungandr_wallet_3b39_Wallet_retrieve_funds(it, lowerSequenceUByte(block0) , status)
+}
+        }.let {
+            Settings.lift(it)
+        }
+    
+    
+
+    companion object {
+        internal fun lift(ptr: Pointer): Wallet {
+            return Wallet(ptr)
+        }
+
+        internal fun read(buf: ByteBuffer): Wallet {
+            // The Rust code always writes pointers as 8 bytes, and will
+            // fail to compile if they don't fit.
+            return Wallet.lift(Pointer(buf.getLong()))
+        }
+
         
-
-    companion object ErrorHandler : CallStatusErrorHandler<WalletException> {
-        override fun lift(error_buf: RustBuffer.ByValue): WalletException {
-            return liftFromRustBuffer(error_buf) { error_buf -> read(error_buf) }
-        }
-
-        fun read(error_buf: ByteBuffer): WalletException {
-            
-                return when(error_buf.getInt()) {
-                1 -> WalletException.InvalidEncryptionKey(String.read(error_buf))
-                2 -> WalletException.MalformedVotePlanId(String.read(error_buf))
-                3 -> WalletException.CoreException(String.read(error_buf))
-                4 -> WalletException.MalformedBlock0Hash(String.read(error_buf))
-                5 -> WalletException.MalformedSecretKey(String.read(error_buf))
-                6 -> WalletException.TimeException(String.read(error_buf))
-                7 -> WalletException.CipherException(String.read(error_buf))
-                8 -> WalletException.InvalidFragment(String.read(error_buf))
-                else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
-            }
-        }
     }
+}
 
-    
+public interface SecretKeyEd25519ExtendedInterface {
     
 }
 
+class SecretKeyEd25519Extended(
+    pointer: Pointer
+) : FFIObject(pointer), SecretKeyEd25519ExtendedInterface {
+    constructor(raw: List<UByte> ) :
+        this(
+    rustCallWithError(WalletException) { status ->
+    _UniFFILib.INSTANCE.jormungandr_wallet_3b39_SecretKeyEd25519Extended_new(lowerSequenceUByte(raw) ,status)
+})
 
-// Helpers for calling Rust
-// In practice we usually need to be synchronized to call this safely, so it doesn't
-// synchronize itself
-
-// Call a rust function that returns a Result<>.  Pass in the Error class companion that corresponds to the Err
-private inline fun <U, E: Exception> rustCallWithError(errorHandler: CallStatusErrorHandler<E>, callback: (RustCallStatus) -> U): U {
-    var status = RustCallStatus();
-    val return_value = callback(status)
-    if (status.isSuccess()) {
-        return return_value
-    } else if (status.isError()) {
-        throw errorHandler.lift(status.error_buf)
-    } else if (status.isPanic()) {
-        // when the rust code sees a panic, it tries to construct a rustbuffer
-        // with the message.  but if that code panics, then it just sends back
-        // an empty buffer.
-        if (status.error_buf.len > 0) {
-            throw InternalException(String.lift(status.error_buf))
-        } else {
-            throw InternalException("Rust panic")
+    /**
+     * Disconnect the object from the underlying Rust object.
+     *
+     * It can be called more than once, but once called, interacting with the object
+     * causes an `IllegalStateException`.
+     *
+     * Clients **must** call this method once done with the object, or cause a memory leak.
+     */
+    override protected fun freeRustArcPtr() {
+        rustCall() { status ->
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_3b39_SecretKeyEd25519Extended_object_free(this.pointer, status)
         }
-    } else {
-        throw InternalException("Unknown rust call status: $status.code")
+    }
+
+    internal fun lower(): Pointer = callWithPointer { it }
+
+    internal fun write(buf: RustBufferBuilder) {
+        // The Rust code always expects pointers written as 8 bytes,
+        // and will fail to compile if they don't fit.
+        buf.putLong(Pointer.nativeValue(this.lower()))
+    }
+
+    
+
+    companion object {
+        internal fun lift(ptr: Pointer): SecretKeyEd25519Extended {
+            return SecretKeyEd25519Extended(ptr)
+        }
+
+        internal fun read(buf: ByteBuffer): SecretKeyEd25519Extended {
+            // The Rust code always writes pointers as 8 bytes, and will
+            // fail to compile if they don't fit.
+            return SecretKeyEd25519Extended.lift(Pointer(buf.getLong()))
+        }
+
+        
     }
 }
 
-// CallStatusErrorHandler implementation for times when we don't expect a CALL_ERROR
-object NullCallStatusErrorHandler: CallStatusErrorHandler<InternalException> {
-    override fun lift(error_buf: RustBuffer.ByValue): InternalException {
-        RustBuffer.free(error_buf)
-        return InternalException("Unexpected CALL_ERROR")
+public interface FragmentInterface {
+    fun id(): List<UByte>
+    
+}
+
+class Fragment(
+    pointer: Pointer
+) : FFIObject(pointer), FragmentInterface {
+    constructor(raw: List<UByte> ) :
+        this(
+    rustCallWithError(WalletException) { status ->
+    _UniFFILib.INSTANCE.jormungandr_wallet_3b39_Fragment_new(lowerSequenceUByte(raw) ,status)
+})
+
+    /**
+     * Disconnect the object from the underlying Rust object.
+     *
+     * It can be called more than once, but once called, interacting with the object
+     * causes an `IllegalStateException`.
+     *
+     * Clients **must** call this method once done with the object, or cause a memory leak.
+     */
+    override protected fun freeRustArcPtr() {
+        rustCall() { status ->
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_3b39_Fragment_object_free(this.pointer, status)
+        }
+    }
+
+    internal fun lower(): Pointer = callWithPointer { it }
+
+    internal fun write(buf: RustBufferBuilder) {
+        // The Rust code always expects pointers written as 8 bytes,
+        // and will fail to compile if they don't fit.
+        buf.putLong(Pointer.nativeValue(this.lower()))
+    }
+
+    override fun id(): List<UByte> =
+        callWithPointer {
+    rustCall() { status ->
+    _UniFFILib.INSTANCE.jormungandr_wallet_3b39_Fragment_id(it,  status)
+}
+        }.let {
+            liftSequenceUByte(it)
+        }
+    
+    
+
+    companion object {
+        internal fun lift(ptr: Pointer): Fragment {
+            return Fragment(ptr)
+        }
+
+        internal fun read(buf: ByteBuffer): Fragment {
+            // The Rust code always writes pointers as 8 bytes, and will
+            // fail to compile if they don't fit.
+            return Fragment.lift(Pointer(buf.getLong()))
+        }
+
+        
     }
 }
 
-// Call a rust function that returns a plain value
-private inline fun <U> rustCall(callback: (RustCallStatus) -> U): U {
-    return rustCallWithError(NullCallStatusErrorHandler, callback);
+public interface SettingsInterface {
+    fun settingsRaw(): SettingsRaw
+    
 }
 
-// Public facing records
-@ExperimentalUnsignedTypes
+class Settings(
+    pointer: Pointer
+) : FFIObject(pointer), SettingsInterface {
+    constructor(settings: SettingsRaw ) :
+        this(
+    rustCallWithError(WalletException) { status ->
+    _UniFFILib.INSTANCE.jormungandr_wallet_3b39_Settings_new(settings.lower() ,status)
+})
+
+    /**
+     * Disconnect the object from the underlying Rust object.
+     *
+     * It can be called more than once, but once called, interacting with the object
+     * causes an `IllegalStateException`.
+     *
+     * Clients **must** call this method once done with the object, or cause a memory leak.
+     */
+    override protected fun freeRustArcPtr() {
+        rustCall() { status ->
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_3b39_Settings_object_free(this.pointer, status)
+        }
+    }
+
+    internal fun lower(): Pointer = callWithPointer { it }
+
+    internal fun write(buf: RustBufferBuilder) {
+        // The Rust code always expects pointers written as 8 bytes,
+        // and will fail to compile if they don't fit.
+        buf.putLong(Pointer.nativeValue(this.lower()))
+    }
+
+    override fun settingsRaw(): SettingsRaw =
+        callWithPointer {
+    rustCall() { status ->
+    _UniFFILib.INSTANCE.jormungandr_wallet_3b39_Settings_settings_raw(it,  status)
+}
+        }.let {
+            SettingsRaw.lift(it)
+        }
+    
+    
+
+    companion object {
+        internal fun lift(ptr: Pointer): Settings {
+            return Settings(ptr)
+        }
+
+        internal fun read(buf: ByteBuffer): Settings {
+            // The Rust code always writes pointers as 8 bytes, and will
+            // fail to compile if they don't fit.
+            return Settings.lift(Pointer(buf.getLong()))
+        }
+
+        
+    }
+}
+
 data class LinearFee (
     var constant: ULong, 
     var coefficient: ULong, 
@@ -1046,7 +1023,6 @@ data class LinearFee (
     
 }
 
-@ExperimentalUnsignedTypes
 data class PerCertificateFee (
     var certificatePoolRegistration: ULong, 
     var certificateStakeDelegation: ULong, 
@@ -1083,7 +1059,6 @@ data class PerCertificateFee (
     
 }
 
-@ExperimentalUnsignedTypes
 data class PerVoteCertificateFee (
     var certificateVotePlan: ULong, 
     var certificateVoteCast: ULong 
@@ -1116,7 +1091,6 @@ data class PerVoteCertificateFee (
     
 }
 
-@ExperimentalUnsignedTypes
 data class TimeEra (
     var epochStart: UInt, 
     var slotStart: ULong, 
@@ -1153,7 +1127,6 @@ data class TimeEra (
     
 }
 
-@ExperimentalUnsignedTypes
 data class SettingsRaw (
     var fees: LinearFee, 
     var discrimination: Discrimination, 
@@ -1172,7 +1145,7 @@ data class SettingsRaw (
             return SettingsRaw(
             LinearFee.read(buf),
             Discrimination.read(buf),
-            readSequenceu8(buf),
+            readSequenceUByte(buf),
             ULong.read(buf),
             UByte.read(buf),
             TimeEra.read(buf),
@@ -1190,7 +1163,7 @@ data class SettingsRaw (
         
             this.discrimination.write(buf)
         
-            writeSequenceu8(this.block0Hash, buf)
+            writeSequenceUByte(this.block0Hash, buf)
         
             this.block0Date.write(buf)
         
@@ -1206,7 +1179,6 @@ data class SettingsRaw (
     
 }
 
-@ExperimentalUnsignedTypes
 data class Proposal (
     var votePlanId: List<UByte>, 
     var index: UByte, 
@@ -1220,7 +1192,7 @@ data class Proposal (
 
         internal fun read(buf: ByteBuffer): Proposal {
             return Proposal(
-            readSequenceu8(buf),
+            readSequenceUByte(buf),
             UByte.read(buf),
             UByte.read(buf),
             PayloadTypeConfig.read(buf)
@@ -1233,7 +1205,7 @@ data class Proposal (
     }
 
     internal fun write(buf: RustBufferBuilder) {
-            writeSequenceu8(this.votePlanId, buf)
+            writeSequenceUByte(this.votePlanId, buf)
         
             this.index.write(buf)
         
@@ -1247,7 +1219,6 @@ data class Proposal (
     
 }
 
-@ExperimentalUnsignedTypes
 data class BlockDate (
     var epoch: UInt, 
     var slot: UInt 
@@ -1281,360 +1252,217 @@ data class BlockDate (
 }
 
 
-// Namespace functions
+// Error WalletError
 
-
-
-@ExperimentalUnsignedTypes
-fun blockDateFromSystemTime(settings: Settings, unixEpoch: ULong ): BlockDate {
-    val _retval = 
-    rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_5d7_block_date_from_system_time(settings.lower(), unixEpoch.lower() ,status)
-}
-    return BlockDate.lift(_retval)
-}
-
-
-
-
-@ExperimentalUnsignedTypes
-fun maxExpirationDate(settings: Settings, currentTime: ULong ): BlockDate {
-    val _retval = 
-    rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_5d7_max_expiration_date(settings.lower(), currentTime.lower() ,status)
-}
-    return BlockDate.lift(_retval)
-}
-
-
-
-
-@ExperimentalUnsignedTypes
-fun symmetricCipherDecrypt(password: List<UByte>, ciphertext: List<UByte> ): List<UByte> {
-    val _retval = 
-    rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_5d7_symmetric_cipher_decrypt(lowerSequenceu8(password), lowerSequenceu8(ciphertext) ,status)
-}
-    return liftSequenceu8(_retval)
-}
-
-
-
-// Objects
-
-@ExperimentalUnsignedTypes
-public interface WalletInterface {
-    fun setState(value: ULong, counter: UInt )
-    fun vote(settings: Settings, proposal: Proposal, choice: UByte, validUntil: BlockDate ): List<UByte>
-    fun confirmTransaction(fragmentId: List<UByte> )
-    fun pendingTransactions(): List<List<UByte>>
-    fun accountId(): List<UByte>
-    fun spendingCounter(): UInt
-    fun totalValue(): ULong
-    fun retrieveFunds(block0: List<UByte> ): Settings
-    
-}
-
-@ExperimentalUnsignedTypes
-class Wallet(
-    pointer: Pointer
-) : FFIObject(pointer), WalletInterface {
-    constructor(accountKey: SecretKeyEd25519Extended, utxoKeys: List<SecretKeyEd25519Extended> ) :
-        this(
-    rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_5d7_Wallet_new(accountKey.lower(), lowerSequenceTypeSecretKeyEd25519Extended(utxoKeys) ,status)
-})
-
-    /**
-     * Disconnect the object from the underlying Rust object.
-     * 
-     * It can be called more than once, but once called, interacting with the object
-     * causes an `IllegalStateException`.
-     * 
-     * Clients **must** call this method once done with the object, or cause a memory leak.
-     */
-    override protected fun freeRustArcPtr() {
-        rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_5d7_Wallet_object_free(this.pointer, status)
-        }
-    }
-
-    internal fun lower(): Pointer = callWithPointer { it }
-
-    internal fun write(buf: RustBufferBuilder) {
-        // The Rust code always expects pointers written as 8 bytes,
-        // and will fail to compile if they don't fit.
-        buf.putLong(Pointer.nativeValue(this.lower()))
-    }
-
-    override fun setState(value: ULong, counter: UInt ) =
-        callWithPointer {
-    rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_5d7_Wallet_set_state(it, value.lower(), counter.lower() , status)
-}
-        }
-    
-    override fun vote(settings: Settings, proposal: Proposal, choice: UByte, validUntil: BlockDate ): List<UByte> =
-        callWithPointer {
-    rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_5d7_Wallet_vote(it, settings.lower(), proposal.lower(), choice.lower(), validUntil.lower() , status)
-}
-        }.let {
-            liftSequenceu8(it)
-        }
-    
-    override fun confirmTransaction(fragmentId: List<UByte> ) =
-        callWithPointer {
-    rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_5d7_Wallet_confirm_transaction(it, lowerSequenceu8(fragmentId) , status)
-}
-        }
-    
-    override fun pendingTransactions(): List<List<UByte>> =
-        callWithPointer {
-    rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_5d7_Wallet_pending_transactions(it,  status)
-}
-        }.let {
-            liftSequenceSequenceu8(it)
-        }
-    
-    override fun accountId(): List<UByte> =
-        callWithPointer {
-    rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_5d7_Wallet_account_id(it,  status)
-}
-        }.let {
-            liftSequenceu8(it)
-        }
-    
-    override fun spendingCounter(): UInt =
-        callWithPointer {
-    rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_5d7_Wallet_spending_counter(it,  status)
-}
-        }.let {
-            UInt.lift(it)
-        }
-    
-    override fun totalValue(): ULong =
-        callWithPointer {
-    rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_5d7_Wallet_total_value(it,  status)
-}
-        }.let {
-            ULong.lift(it)
-        }
-    
-    override fun retrieveFunds(block0: List<UByte> ): Settings =
-        callWithPointer {
-    rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_5d7_Wallet_retrieve_funds(it, lowerSequenceu8(block0) , status)
-}
-        }.let {
-            Settings.lift(it)
-        }
-    
-    
-
-    companion object {
-        internal fun lift(ptr: Pointer): Wallet {
-            return Wallet(ptr)
-        }
-
-        internal fun read(buf: ByteBuffer): Wallet {
-            // The Rust code always writes pointers as 8 bytes, and will
-            // fail to compile if they don't fit.
-            return Wallet.lift(Pointer(buf.getLong()))
-        }
-
+sealed class WalletException(message: String): Exception(message)  {
+        // Each variant is a nested class
+        // Flat enums carries a string error message, so no special implementation is necessary.
+        class InvalidEncryptionKey(message: String) : WalletException(message)
+        class MalformedVotePlanId(message: String) : WalletException(message)
+        class CoreException(message: String) : WalletException(message)
+        class MalformedBlock0Hash(message: String) : WalletException(message)
+        class MalformedSecretKey(message: String) : WalletException(message)
+        class TimeException(message: String) : WalletException(message)
+        class CipherException(message: String) : WalletException(message)
+        class InvalidFragment(message: String) : WalletException(message)
         
-    }
-}
 
-@ExperimentalUnsignedTypes
-public interface SecretKeyEd25519ExtendedInterface {
-    
-}
-
-@ExperimentalUnsignedTypes
-class SecretKeyEd25519Extended(
-    pointer: Pointer
-) : FFIObject(pointer), SecretKeyEd25519ExtendedInterface {
-    constructor(raw: List<UByte> ) :
-        this(
-    rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_5d7_SecretKeyEd25519Extended_new(lowerSequenceu8(raw) ,status)
-})
-
-    /**
-     * Disconnect the object from the underlying Rust object.
-     * 
-     * It can be called more than once, but once called, interacting with the object
-     * causes an `IllegalStateException`.
-     * 
-     * Clients **must** call this method once done with the object, or cause a memory leak.
-     */
-    override protected fun freeRustArcPtr() {
-        rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_5d7_SecretKeyEd25519Extended_object_free(this.pointer, status)
+    companion object ErrorHandler : CallStatusErrorHandler<WalletException> {
+        override fun lift(error_buf: RustBuffer.ByValue): WalletException {
+            return liftFromRustBuffer(error_buf) { error_buf -> read(error_buf) }
         }
-    }
 
-    internal fun lower(): Pointer = callWithPointer { it }
-
-    internal fun write(buf: RustBufferBuilder) {
-        // The Rust code always expects pointers written as 8 bytes,
-        // and will fail to compile if they don't fit.
-        buf.putLong(Pointer.nativeValue(this.lower()))
+        fun read(error_buf: ByteBuffer): WalletException {
+            
+                return when(error_buf.getInt()) {
+                1 -> WalletException.InvalidEncryptionKey(String.read(error_buf))
+                2 -> WalletException.MalformedVotePlanId(String.read(error_buf))
+                3 -> WalletException.CoreException(String.read(error_buf))
+                4 -> WalletException.MalformedBlock0Hash(String.read(error_buf))
+                5 -> WalletException.MalformedSecretKey(String.read(error_buf))
+                6 -> WalletException.TimeException(String.read(error_buf))
+                7 -> WalletException.CipherException(String.read(error_buf))
+                8 -> WalletException.InvalidFragment(String.read(error_buf))
+                else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
+            }
+        }
     }
 
     
-
-    companion object {
-        internal fun lift(ptr: Pointer): SecretKeyEd25519Extended {
-            return SecretKeyEd25519Extended(ptr)
-        }
-
-        internal fun read(buf: ByteBuffer): SecretKeyEd25519Extended {
-            // The Rust code always writes pointers as 8 bytes, and will
-            // fail to compile if they don't fit.
-            return SecretKeyEd25519Extended.lift(Pointer(buf.getLong()))
-        }
-
-        
-    }
-}
-
-@ExperimentalUnsignedTypes
-public interface FragmentInterface {
-    fun id(): List<UByte>
     
 }
-
-@ExperimentalUnsignedTypes
-class Fragment(
-    pointer: Pointer
-) : FFIObject(pointer), FragmentInterface {
-    constructor(raw: List<UByte> ) :
-        this(
-    rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_5d7_Fragment_new(lowerSequenceu8(raw) ,status)
-})
-
-    /**
-     * Disconnect the object from the underlying Rust object.
-     * 
-     * It can be called more than once, but once called, interacting with the object
-     * causes an `IllegalStateException`.
-     * 
-     * Clients **must** call this method once done with the object, or cause a memory leak.
-     */
-    override protected fun freeRustArcPtr() {
-        rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_5d7_Fragment_object_free(this.pointer, status)
-        }
-    }
-
-    internal fun lower(): Pointer = callWithPointer { it }
-
-    internal fun write(buf: RustBufferBuilder) {
-        // The Rust code always expects pointers written as 8 bytes,
-        // and will fail to compile if they don't fit.
-        buf.putLong(Pointer.nativeValue(this.lower()))
-    }
-
-    override fun id(): List<UByte> =
-        callWithPointer {
-    rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_5d7_Fragment_id(it,  status)
+internal fun UByte.Companion.lift(v: Byte): UByte {
+    return v.toUByte()
 }
-        }.let {
-            liftSequenceu8(it)
-        }
-    
-    
 
-    companion object {
-        internal fun lift(ptr: Pointer): Fragment {
-            return Fragment(ptr)
-        }
+internal fun UByte.Companion.read(buf: ByteBuffer): UByte {
+    return UByte.lift(buf.get())
+}
 
-        internal fun read(buf: ByteBuffer): Fragment {
-            // The Rust code always writes pointers as 8 bytes, and will
-            // fail to compile if they don't fit.
-            return Fragment.lift(Pointer(buf.getLong()))
-        }
+internal fun UByte.lower(): Byte {
+    return this.toByte()
+}
 
-        
+internal fun UByte.write(buf: RustBufferBuilder) {
+    buf.putByte(this.toByte())
+}
+internal fun UInt.Companion.lift(v: Int): UInt {
+    return v.toUInt()
+}
+
+internal fun UInt.Companion.read(buf: ByteBuffer): UInt {
+    return UInt.lift(buf.getInt())
+}
+
+internal fun UInt.lower(): Int {
+    return this.toInt()
+}
+
+internal fun UInt.write(buf: RustBufferBuilder) {
+    buf.putInt(this.toInt())
+}
+internal fun ULong.Companion.lift(v: Long): ULong {
+    return v.toULong()
+}
+
+internal fun ULong.Companion.read(buf: ByteBuffer): ULong {
+    return ULong.lift(buf.getLong())
+}
+
+internal fun ULong.lower(): Long {
+    return this.toLong()
+}
+
+internal fun ULong.write(buf: RustBufferBuilder) {
+    buf.putLong(this.toLong())
+}
+internal fun String.Companion.lift(rbuf: RustBuffer.ByValue): String {
+    try {
+        val byteArr = ByteArray(rbuf.len)
+        rbuf.asByteBuffer()!!.get(byteArr)
+        return byteArr.toString(Charsets.UTF_8)
+    } finally {
+        RustBuffer.free(rbuf)
     }
 }
 
-@ExperimentalUnsignedTypes
-public interface SettingsInterface {
-    fun settingsRaw(): SettingsRaw
-    
+internal fun String.Companion.read(buf: ByteBuffer): String {
+    val len = buf.getInt()
+    val byteArr = ByteArray(len)
+    buf.get(byteArr)
+    return byteArr.toString(Charsets.UTF_8)
 }
 
-@ExperimentalUnsignedTypes
-class Settings(
-    pointer: Pointer
-) : FFIObject(pointer), SettingsInterface {
-    constructor(settings: SettingsRaw ) :
-        this(
-    rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_5d7_Settings_new(settings.lower() ,status)
-})
-
-    /**
-     * Disconnect the object from the underlying Rust object.
-     * 
-     * It can be called more than once, but once called, interacting with the object
-     * causes an `IllegalStateException`.
-     * 
-     * Clients **must** call this method once done with the object, or cause a memory leak.
-     */
-    override protected fun freeRustArcPtr() {
-        rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_5d7_Settings_object_free(this.pointer, status)
-        }
-    }
-
-    internal fun lower(): Pointer = callWithPointer { it }
-
-    internal fun write(buf: RustBufferBuilder) {
-        // The Rust code always expects pointers written as 8 bytes,
-        // and will fail to compile if they don't fit.
-        buf.putLong(Pointer.nativeValue(this.lower()))
-    }
-
-    override fun settingsRaw(): SettingsRaw =
-        callWithPointer {
-    rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_5d7_Settings_settings_raw(it,  status)
+internal fun String.lower(): RustBuffer.ByValue {
+    val byteArr = this.toByteArray(Charsets.UTF_8)
+    // Ideally we'd pass these bytes to `ffi_bytebuffer_from_bytes`, but doing so would require us
+    // to copy them into a JNA `Memory`. So we might as well directly copy them into a `RustBuffer`.
+    val rbuf = RustBuffer.alloc(byteArr.size)
+    rbuf.asByteBuffer()!!.put(byteArr)
+    return rbuf
 }
-        }.let {
-            SettingsRaw.lift(it)
-        }
-    
-    
 
-    companion object {
-        internal fun lift(ptr: Pointer): Settings {
-            return Settings(ptr)
-        }
+internal fun String.write(buf: RustBufferBuilder) {
+    val byteArr = this.toByteArray(Charsets.UTF_8)
+    buf.putInt(byteArr.size)
+    buf.put(byteArr)
+}
+// Helper code for Fragment class is found in ObjectTemplate.kt
+// Helper code for SecretKeyEd25519Extended class is found in ObjectTemplate.kt
+// Helper code for Settings class is found in ObjectTemplate.kt
+// Helper code for Wallet class is found in ObjectTemplate.kt
+// Helper code for BlockDate record is found in RecordTemplate.kt
+// Helper code for LinearFee record is found in RecordTemplate.kt
+// Helper code for PerCertificateFee record is found in RecordTemplate.kt
+// Helper code for PerVoteCertificateFee record is found in RecordTemplate.kt
+// Helper code for Proposal record is found in RecordTemplate.kt
+// Helper code for SettingsRaw record is found in RecordTemplate.kt
+// Helper code for TimeEra record is found in RecordTemplate.kt
+// Helper code for Discrimination enum is found in EnumTemplate.kt
+// Helper code for PayloadTypeConfig enum is found in EnumTemplate.kt
+// Helper code for WalletError error is found in ErrorTemplate.kt
 
-        internal fun read(buf: ByteBuffer): Settings {
-            // The Rust code always writes pointers as 8 bytes, and will
-            // fail to compile if they don't fit.
-            return Settings.lift(Pointer(buf.getLong()))
-        }
 
-        
+// Helper functions for passing values of type List<UByte>
+internal fun lowerSequenceUByte(v: List<UByte>): RustBuffer.ByValue {
+    return lowerIntoRustBuffer(v) { v, buf ->
+        writeSequenceUByte(v, buf)
+    }
+}
+
+internal fun writeSequenceUByte(v: List<UByte>, buf: RustBufferBuilder) {
+    buf.putInt(v.size)
+    v.forEach {
+        it.write(buf)
+    }
+}
+
+internal fun liftSequenceUByte(rbuf: RustBuffer.ByValue): List<UByte> {
+    return liftFromRustBuffer(rbuf) { buf ->
+        readSequenceUByte(buf)
+    }
+}
+
+internal fun readSequenceUByte(buf: ByteBuffer): List<UByte> {
+    val len = buf.getInt()
+    return List<UByte>(len) {
+        UByte.read(buf)
     }
 }
 
 
-// Callback Interfaces
+// Helper functions for passing values of type List<SecretKeyEd25519Extended>
+internal fun lowerSequenceObjectSecretKeyEd25519Extended(v: List<SecretKeyEd25519Extended>): RustBuffer.ByValue {
+    return lowerIntoRustBuffer(v) { v, buf ->
+        writeSequenceObjectSecretKeyEd25519Extended(v, buf)
+    }
+}
 
+internal fun writeSequenceObjectSecretKeyEd25519Extended(v: List<SecretKeyEd25519Extended>, buf: RustBufferBuilder) {
+    buf.putInt(v.size)
+    v.forEach {
+        it.write(buf)
+    }
+}
+
+internal fun liftSequenceObjectSecretKeyEd25519Extended(rbuf: RustBuffer.ByValue): List<SecretKeyEd25519Extended> {
+    return liftFromRustBuffer(rbuf) { buf ->
+        readSequenceObjectSecretKeyEd25519Extended(buf)
+    }
+}
+
+internal fun readSequenceObjectSecretKeyEd25519Extended(buf: ByteBuffer): List<SecretKeyEd25519Extended> {
+    val len = buf.getInt()
+    return List<SecretKeyEd25519Extended>(len) {
+        SecretKeyEd25519Extended.read(buf)
+    }
+}
+
+
+// Helper functions for passing values of type List<List<UByte>>
+internal fun lowerSequenceSequenceUByte(v: List<List<UByte>>): RustBuffer.ByValue {
+    return lowerIntoRustBuffer(v) { v, buf ->
+        writeSequenceSequenceUByte(v, buf)
+    }
+}
+
+internal fun writeSequenceSequenceUByte(v: List<List<UByte>>, buf: RustBufferBuilder) {
+    buf.putInt(v.size)
+    v.forEach {
+        writeSequenceUByte(it, buf)
+    }
+}
+
+internal fun liftSequenceSequenceUByte(rbuf: RustBuffer.ByValue): List<List<UByte>> {
+    return liftFromRustBuffer(rbuf) { buf ->
+        readSequenceSequenceUByte(buf)
+    }
+}
+
+internal fun readSequenceSequenceUByte(buf: ByteBuffer): List<List<UByte>> {
+    val len = buf.getInt()
+    return List<List<UByte>>(len) {
+        readSequenceUByte(buf)
+    }
+}
 
