@@ -106,7 +106,7 @@ const tests = [
         expect(transactions.length).toBe(1);
 
         const ignoredValue = await conversionGetIgnored(conversion);
-        expect(ignoredValue.ignored).toBe(0);
+        expect(ignoredValue.ignored).toBe('0');
 
         const pendingBefore = await getPendingTransactions(wallet);
         expect(pendingBefore.length).toBe(1);
