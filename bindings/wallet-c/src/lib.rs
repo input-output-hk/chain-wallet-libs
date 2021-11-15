@@ -136,7 +136,7 @@ pub unsafe extern "C" fn iohk_jormungandr_wallet_id(
 #[no_mangle]
 pub unsafe extern "C" fn iohk_jormungandr_wallet_spending_counter(
     wallet: WalletPtr,
-    spending_counter_ptr: *mut u32,
+    spending_counter_ptr: *mut [u32; 4],
 ) -> ErrorPtr {
     wallet_spending_counter(wallet as *mut WalletRust, spending_counter_ptr).into_c_api()
         as ErrorPtr
@@ -205,9 +205,11 @@ pub unsafe extern "C" fn iohk_jormungandr_wallet_total_value(
 pub extern "C" fn iohk_jormungandr_wallet_set_state(
     wallet: WalletPtr,
     value: u64,
-    counter: u32,
+    counters: *const [u8; 4],
+    counters_len: usize,
 ) -> ErrorPtr {
-    let r = wallet_set_state(wallet as *mut WalletRust, value, counter);
+    let counters = unsafe { std::slice::from_raw_parts(counters, counters_len) };
+    let r = wallet_set_state(wallet as *mut WalletRust, value, counters);
 
     r.into_c_api() as ErrorPtr
 }
@@ -304,6 +306,7 @@ pub unsafe extern "C" fn iohk_jormungandr_wallet_vote_cast(
     proposal: ProposalPtr,
     choice: u8,
     valid_until: BlockDate,
+    lane: u8,
     transaction_out: *mut *const u8,
     len_out: *mut usize,
 ) -> ErrorPtr {
@@ -313,6 +316,7 @@ pub unsafe extern "C" fn iohk_jormungandr_wallet_vote_cast(
         proposal as *mut ProposalRust,
         choice,
         valid_until,
+        lane,
         transaction_out,
         len_out,
     );
