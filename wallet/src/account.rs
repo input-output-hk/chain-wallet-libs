@@ -12,6 +12,8 @@ pub use hdkeygen::account::AccountId;
 use hdkeygen::account::{Account, Seed};
 use thiserror::Error;
 
+pub const MAX_LANES: usize = 4;
+
 pub struct Wallet {
     account: EitherAccount,
     state: States<FragmentId, State>,
@@ -20,7 +22,18 @@ pub struct Wallet {
 #[derive(Debug)]
 pub struct State {
     value: Value,
-    counter: SpendingCounter,
+    counters: Vec<SpendingCounter>,
+}
+
+impl Default for State {
+    fn default() -> Self {
+        Self {
+            value: Default::default(),
+            counters: (0..MAX_LANES)
+                .map(|lane| SpendingCounter::new(lane, 0))
+                .collect(),
+        }
+    }
 }
 
 pub struct WalletBuildTx<'a> {
@@ -34,6 +47,10 @@ pub struct WalletBuildTx<'a> {
 pub enum Error {
     #[error("not enough funds, needed {needed:?}, available {current:?}")]
     NotEnoughFunds { current: Value, needed: Value },
+    #[error("invalid lane for spending counter")]
+    InvalidLane,
+    #[error("invalid spending counters")]
+    InvalidSpendingCounters,
 }
 
 enum EitherAccount {
@@ -45,26 +62,14 @@ impl Wallet {
     pub fn new_from_seed(seed: Seed) -> Wallet {
         Wallet {
             account: EitherAccount::Seed(Account::from_seed(seed)),
-            state: States::new(
-                FragmentId::zero_hash(),
-                State {
-                    value: Value::zero(),
-                    counter: SpendingCounter::zero(),
-                },
-            ),
+            state: States::new(FragmentId::zero_hash(), Default::default()),
         }
     }
 
     pub fn new_from_key(key: SecretKey<Ed25519Extended>) -> Wallet {
         Wallet {
             account: EitherAccount::Extended(Account::from_secret_key(key)),
-            state: States::new(
-                FragmentId::zero_hash(),
-                State {
-                    value: Value::zero(),
-                    counter: SpendingCounter::zero(),
-                },
-            ),
+            state: States::new(FragmentId::zero_hash(), Default::default()),
         }
     }
 
@@ -85,12 +90,24 @@ impl Wallet {
     ///
     /// TODO: change to a constructor/initializator?, or just make it so it resets the state
     ///
-    pub fn update_state(&mut self, value: Value, counter: SpendingCounter) {
-        self.state = States::new(FragmentId::zero_hash(), State { value, counter });
+    pub fn set_state(&mut self, value: Value, counters: Vec<SpendingCounter>) -> Result<(), Error> {
+        if counters.len() != MAX_LANES {
+            return Err(Error::InvalidSpendingCounters);
+        }
+
+        for (c, l) in counters.iter().zip(0..MAX_LANES) {
+            if c.lane() != l {
+                return Err(Error::InvalidSpendingCounters);
+            }
+        }
+
+        self.state = States::new(FragmentId::zero_hash(), State { value, counters });
+
+        Ok(())
     }
 
-    pub fn spending_counter(&self) -> SpendingCounter {
-        self.state.last_state().state().counter
+    pub fn spending_counter(&self) -> Vec<SpendingCounter> {
+        self.state.last_state().state().counters.clone()
     }
 
     pub fn value(&self) -> Value {
@@ -137,9 +154,18 @@ impl Wallet {
         }
     }
 
-    pub fn new_transaction(&mut self, needed_input: Value) -> Result<WalletBuildTx, Error> {
+    pub fn new_transaction(
+        &mut self,
+        needed_input: Value,
+        lane: u8,
+    ) -> Result<WalletBuildTx, Error> {
         let state = self.state.last_state().state();
-        let current_counter = state.counter;
+
+        let current_counter = *state
+            .counters
+            .get(lane as usize)
+            .ok_or(Error::InvalidLane)?;
+
         let next_value =
             state
                 .value
@@ -166,7 +192,7 @@ impl Wallet {
 
         let mut new_value = state.value;
 
-        let mut increment_counter = false;
+        let mut increment_counter = None;
         let mut at_least_one_output = false;
 
         match fragment {
@@ -175,12 +201,19 @@ impl Wallet {
             Fragment::UpdateVote(_signed_update) => {}
             Fragment::OldUtxoDeclaration(_utxos) => {}
             _ => {
-                on_tx_input_and_witnesses(fragment, |(input, _witness)| {
+                on_tx_input_and_witnesses(fragment, |(input, witness)| {
                     if let InputEnum::AccountInput(id, input_value) = input.to_enum() {
                         if self.account_id().as_ref() == id.as_ref() {
                             new_value = new_value.checked_sub(input_value).expect("value overflow");
+
+                            match witness {
+                                chain_impl_mockchain::transaction::Witness::Account(
+                                    spending,
+                                    _,
+                                ) => increment_counter = Some(spending),
+                                _ => unreachable!(),
+                            }
                         }
-                        increment_counter = true;
                     }
 
                     // TODO: check monotonicity by signing and comparing
@@ -202,20 +235,30 @@ impl Wallet {
             }
         };
 
-        let counter = if increment_counter {
-            state.counter.increment()
+        let counters = if let Some(counter) = increment_counter {
+            state
+                .counters
+                .iter()
+                .map(|current| {
+                    if *current == counter {
+                        counter.increment()
+                    } else {
+                        *current
+                    }
+                })
+                .collect()
         } else {
-            state.counter
+            state.counters.clone()
         };
 
         let new_state = State {
-            counter,
+            counters,
             value: new_value,
         };
 
         self.state.push(*fragment_id, new_state);
 
-        at_least_one_output || increment_counter
+        at_least_one_output || increment_counter.is_some()
     }
 }
 
@@ -240,11 +283,27 @@ impl<'a> WalletBuildTx<'a> {
     }
 
     pub fn add_fragment_id(self, fragment_id: FragmentId) {
+        let counters = self
+            .wallet
+            .state
+            .last_state()
+            .state()
+            .counters
+            .iter()
+            .map(|counter| {
+                if *counter == self.current_counter {
+                    self.current_counter.increment()
+                } else {
+                    *counter
+                }
+            })
+            .collect();
+
         self.wallet.state.push(
             fragment_id,
             State {
                 value: self.next_value,
-                counter: self.current_counter.increment(),
+                counters,
             },
         );
     }
