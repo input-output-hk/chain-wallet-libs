@@ -1,4 +1,5 @@
 use chain_impl_mockchain::{
+    accounting::account::SpendingCounterIncreasing,
     block::Block,
     fragment::{Fragment, FragmentRaw},
     ledger::{Error as LedgerError, Ledger},
@@ -57,16 +58,11 @@ impl State {
     pub fn get_account_state(
         &self,
         account_id: wallet::AccountId,
-    ) -> Option<(chain_impl_mockchain::account::SpendingCounter, Value)> {
+    ) -> Option<(SpendingCounterIncreasing, Value)> {
         self.ledger
             .accounts()
             .get_state(&chain_crypto::PublicKey::from(account_id).into())
             .ok()
-            .map(|account_state| {
-                (
-                    account_state.spending.get_valid_counter(),
-                    account_state.value,
-                )
-            })
+            .map(|account_state| (account_state.spending.clone(), account_state.value))
     }
 }

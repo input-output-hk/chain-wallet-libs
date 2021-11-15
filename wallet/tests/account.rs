@@ -3,6 +3,7 @@ mod utils;
 use self::utils::State;
 use chain_crypto::SecretKey;
 use chain_impl_mockchain::{
+    account::SpendingCounter,
     certificate::VoteCast,
     fragment::Fragment,
     value::Value,
@@ -26,7 +27,12 @@ fn update_state_overrides_old() {
 
     assert_eq!(account.confirmed_value(), Value::zero());
 
-    account.update_state(Value(110), 0.into());
+    account
+        .set_state(
+            Value(110),
+            (0..4).map(|lane| SpendingCounter::new(lane, 1)).collect(),
+        )
+        .unwrap();
 
     assert_eq!(account.confirmed_value(), Value(110));
 }
@@ -78,7 +84,7 @@ fn cast_vote() {
 
     let value = builder.estimate_fee_with(1, 0);
 
-    let account_tx_builder = account.new_transaction(value).unwrap();
+    let account_tx_builder = account.new_transaction(value, 0).unwrap();
     let input = account_tx_builder.input();
     let witness_builder = account_tx_builder.witness_builder();
 
