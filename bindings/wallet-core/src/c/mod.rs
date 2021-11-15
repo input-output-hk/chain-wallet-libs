@@ -165,11 +165,18 @@ pub unsafe fn wallet_confirm_transaction(wallet: WalletPtr, fragment_id: *const 
 /// the function checks if the pointers are null. Mind not to put random values
 /// in or you may see unexpected behaviors
 ///
-pub unsafe fn wallet_spending_counter(wallet: WalletPtr, spending_counter_ptr: *mut u32) -> Result {
+pub unsafe fn wallet_spending_counter(
+    wallet: WalletPtr,
+    spending_counter_ptr_out: *mut [u32; 4],
+) -> Result {
     let wallet = non_null!(wallet);
-    let spending_counter = non_null_mut!(spending_counter_ptr);
+    let spending_counter = non_null_mut!(spending_counter_ptr_out);
 
-    *spending_counter = wallet.spending_counter();
+    let counters = wallet.spending_counter();
+
+    for i in 0..spending_counter.len() {
+        spending_counter[i] = counters[i].into();
+    }
 
     Result::success()
 }
@@ -223,7 +230,7 @@ pub unsafe fn wallet_total_value(wallet: WalletPtr, total_out: *mut u64) -> Resu
 ///
 /// * this function may fail if the wallet pointer is null;
 ///
-pub fn wallet_set_state(wallet: WalletPtr, value: u64, counter: u32) -> Result {
+pub fn wallet_set_state(wallet: WalletPtr, value: u64, counter: &[[u8; 4]]) -> Result {
     let wallet = if let Some(wallet) = unsafe { wallet.as_mut() } {
         wallet
     } else {
@@ -231,9 +238,10 @@ pub fn wallet_set_state(wallet: WalletPtr, value: u64, counter: u32) -> Result {
     };
     let value = Value(value);
 
-    wallet.set_state(value, counter);
-
-    Result::success()
+    match wallet.set_state(value, counter.to_vec()) {
+        Ok(_) => Result::success(),
+        Err(e) => e.into(),
+    }
 }
 
 /// build the vote cast transaction
@@ -254,6 +262,7 @@ pub unsafe fn wallet_vote_cast(
     proposal: ProposalPtr,
     choice: u8,
     valid_until: BlockDate,
+    lane: u8,
     transaction_out: *mut *const u8,
     len_out: *mut usize,
 ) -> Result {
@@ -284,7 +293,7 @@ pub unsafe fn wallet_vote_cast(
 
     let choice = Choice::new(choice);
 
-    let transaction = match wallet.vote(settings, proposal, choice, &valid_until.into()) {
+    let transaction = match wallet.vote(settings, proposal, choice, &valid_until.into(), lane) {
         Ok(transaction) => Box::leak(transaction),
         Err(err) => return err.into(),
     };
