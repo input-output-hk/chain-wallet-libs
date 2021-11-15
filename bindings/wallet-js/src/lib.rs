@@ -3,7 +3,6 @@
 use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaCha20Rng;
 use std::convert::TryInto;
-
 use wasm_bindgen::prelude::*;
 
 mod utils;
@@ -69,6 +68,12 @@ extern "C" {
 pub struct BlockDate(chain_impl_mockchain::block::BlockDate);
 
 #[wasm_bindgen]
+#[derive(Clone)]
+pub struct SpendingCounter(chain_impl_mockchain::account::SpendingCounter);
+
+impl_collection!(SpendingCounters, SpendingCounter);
+
+#[wasm_bindgen]
 impl Wallet {
     /// Imports private keys to create a wallet.
     ///
@@ -118,8 +123,13 @@ impl Wallet {
     /// before doing any transactions, otherwise future transactions may fail
     /// to be accepted by the blockchain nodes because of an invalid witness
     /// signature.
-    pub fn set_state(&mut self, value: u64, counter: u32) {
-        self.0.set_state(wallet_core::Value(value), counter);
+    pub fn set_state(&mut self, value: u64, counters: SpendingCounters) -> Result<(), JsValue> {
+        self.0
+            .set_state(
+                wallet_core::Value(value),
+                counters.0.into_iter().map(|c| c.0.to_bytes()).collect(),
+            )
+            .map_err(|e| JsValue::from(e.to_string()))
     }
 
     /// Cast a vote
@@ -144,6 +154,7 @@ impl Wallet {
         proposal: &Proposal,
         choice: u8,
         valid_until: &BlockDate,
+        lane: u8,
     ) -> Result<Box<[u8]>, JsValue> {
         self.0
             .vote(
@@ -151,6 +162,7 @@ impl Wallet {
                 &proposal.0,
                 wallet_core::Choice::new(choice),
                 &valid_until.0,
+                lane,
             )
             .map_err(|e| JsValue::from(e.to_string()))
     }
