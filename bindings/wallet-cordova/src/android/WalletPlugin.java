@@ -306,8 +306,8 @@ public class WalletPlugin extends CordovaPlugin {
         final Long walletPtr = args.getLong(0);
 
         try {
-            final long value = Wallet.spendingCounter(walletPtr);
-            callbackContext.success(Long.toString(value));
+            final byte[] nonces = Wallet.spendingCounter(walletPtr);
+            callbackContext.success(nonces);
         } catch (final Exception e) {
             callbackContext.error(e.getMessage());
         }
@@ -316,10 +316,10 @@ public class WalletPlugin extends CordovaPlugin {
     private void walletSetState(final CordovaArgs args, final CallbackContext callbackContext) throws JSONException {
         final Long walletPtr = args.getLong(0);
         final Long value = args.getLong(1);
-        final Long counter = args.getLong(2);
+        final byte[] nonces = args.getArrayBuffer(2);
 
         try {
-            Wallet.setState(walletPtr, value, counter);
+            Wallet.setState(walletPtr, value, nonces);
             callbackContext.success();
         } catch (final Exception e) {
             callbackContext.error(e.getMessage());
@@ -332,12 +332,13 @@ public class WalletPlugin extends CordovaPlugin {
         final Long proposal = args.getLong(2);
         final Integer choice = args.getInt(3);
         final JSONObject expirationDate = (JSONObject) args.get(4);
+        final Integer lane = args.getInt(5);
 
         final long epoch = Long.parseUnsignedLong(expirationDate.getString("epoch"));
         final long slot = Long.parseUnsignedLong(expirationDate.getString("slot"));
 
         try {
-            final byte[] tx = Wallet.voteCast(wallet, settings, proposal, choice, new Time.BlockDate(epoch, slot));
+            final byte[] tx = Wallet.voteCast(wallet, settings, proposal, choice, new Time.BlockDate(epoch, slot), lane);
             callbackContext.success(tx);
         } catch (final Exception e) {
             callbackContext.error(e.getMessage());
