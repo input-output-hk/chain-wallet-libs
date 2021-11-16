@@ -48,7 +48,12 @@ function promisify(thisArg, f) {
 }
 
 function uint8ArrayEquals(a, b) {
+    if (!a instanceof Uint8Array || !b instanceof Uint8Array) {
+        throw Error('invalid arguments, expected a Uint8Array');
+    }
+
     const length = a.length === b.length;
+
     let elements = true;
 
     for (let i = 0; i < a.length; i++) {
