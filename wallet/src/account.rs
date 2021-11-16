@@ -12,7 +12,7 @@ pub use hdkeygen::account::AccountId;
 use hdkeygen::account::{Account, Seed};
 use thiserror::Error;
 
-pub const MAX_LANES: usize = 4;
+pub const MAX_LANES: usize = 8;
 
 pub struct Wallet {
     account: EitherAccount,
