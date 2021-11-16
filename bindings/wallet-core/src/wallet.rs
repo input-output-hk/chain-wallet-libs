@@ -70,11 +70,11 @@ impl Wallet {
 
     /// get the current spending counter
     ///
-    pub fn spending_counter(&self) -> Vec<u32> {
+    pub fn spending_counter(&self) -> Vec<[u8; 4]> {
         self.account
             .spending_counter()
             .into_iter()
-            .map(Into::into)
+            .map(SpendingCounter::to_bytes)
             .collect()
     }
 
