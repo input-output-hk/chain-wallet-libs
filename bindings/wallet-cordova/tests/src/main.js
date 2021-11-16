@@ -15,6 +15,17 @@ PASSWORD[2] = keys.password[2];
 PASSWORD[3] = keys.password[3];
 const VOTE_ENCRYPTION_KEY = 'ristretto255_votepk1nc988wtjlrm5k0z43088p0rrvd5yhvc96k7zh99p6w74gupxggtqyx4792';
 
+const DEFAULT_NONCES = new Uint8Array([
+    0, 0, 0, (0 << 5),
+    0, 0, 0, (1 << 5),
+    0, 0, 0, (2 << 5),
+    0, 0, 0, (3 << 5),
+    0, 0, 0, (4 << 5),
+    0, 0, 0, (5 << 5),
+    0, 0, 0, (6 << 5),
+    0, 0, 0, (7 << 5),
+]);
+
 // TODO: write settings getter for this
 const BLOCK0_DATE = 1586637936;
 const SLOT_DURATION = 10;
@@ -67,8 +78,7 @@ const tests = [
     ['should be able to set state', async function () {
         const wallet = await walletFromFile();
         const value = 1000;
-        const counter = 2;
-        await setState(wallet, value, counter);
+        await setState(wallet, value, DEFAULT_NONCES);
     }],
     ['can cast vote', async function () {
         const array = new Array(32);
@@ -85,13 +95,18 @@ const tests = [
 
         const settingsPtr = await defaultSettings();
 
-        await walletSetState(walletPtr, 1000000, 0);
+        await walletSetState(walletPtr, 1000000, DEFAULT_NONCES);
 
-        expect(await spendingCounter(walletPtr)).toBe(0);
+        expect(uint8ArrayEquals(new Uint8Array(await spendingCounter(walletPtr)), DEFAULT_NONCES)).toBe(true);
 
-        await walletVote(walletPtr, settingsPtr, proposalPtr, 0, await maxExpirationDate(settingsPtr, BLOCK0_DATE + 600));
+        await walletVote(walletPtr, settingsPtr, proposalPtr, 0, await maxExpirationDate(settingsPtr, BLOCK0_DATE + 600), 0);
 
-        expect(await spendingCounter(walletPtr)).toBe(1);
+        const noncesAfterVote = new Uint8Array(await spendingCounter(walletPtr));
+
+        const expectedNoncesAfter = DEFAULT_NONCES.slice();
+        expectedNoncesAfter[0] = 1;
+
+        expect(uint8ArrayEquals(new Uint8Array(noncesAfterVote), expectedNoncesAfter)).toBe(true);
 
         await deleteSettings(settingsPtr);
         await deleteWallet(walletPtr);
@@ -109,9 +124,15 @@ const tests = [
 
         const proposalPtr = await proposalNewPrivate(votePlanId, index, numChoices, VOTE_ENCRYPTION_KEY);
         const walletPtr = await walletFromFile();
+<<<<<<< HEAD
         const settingsPtr = await defaultSettings();
         await walletSetState(walletPtr, 1000000, 1);
         await walletVote(walletPtr, settingsPtr, proposalPtr, 0, await maxExpirationDate(settingsPtr, BLOCK0_DATE + 600));
+=======
+        const settingsPtr = await retrieveFunds(walletPtr, hexStringToBytes(BLOCK0));
+        await walletSetState(walletPtr, 1000000, DEFAULT_NONCES);
+        await walletVote(walletPtr, settingsPtr, proposalPtr, 0, await maxExpirationDate(settingsPtr, BLOCK0_DATE + 600), 0);
+>>>>>>> e8a830b... wallet-cordova: update tests
 
         await deleteSettings(settingsPtr);
         await deleteWallet(walletPtr);
@@ -165,7 +186,7 @@ const tests = [
 
         const block0Date = "110";
         const slotDuration = "10";
-        const era = {epochStart: "0", slotStart: "0", slotsPerEpoch: "100"};
+        const era = { epochStart: "0", slotStart: "0", slotsPerEpoch: "100" };
         const transactionMaxExpiryEpochs = "2";
 
         const settingsPtr = await settingsNew(settingsExpected.block0Hash,
@@ -206,12 +227,20 @@ const tests = [
         const proposalPtr = await proposalNewPublic(votePlanId, index, numChoices);
         const walletPtr = await walletFromFile();
 
+<<<<<<< HEAD
         const settingsPtr = await defaultSettings();
         await walletSetState(walletPtr, 1000000, 0);
 
         // TODO: maybe walletVote should return an object with the both tx and the id
         const tx1 = await walletVote(walletPtr, settingsPtr, proposalPtr, 1, await maxExpirationDate(settingsPtr, BLOCK0_DATE + 600));
         const tx2 = await walletVote(walletPtr, settingsPtr, proposalPtr, 2, await maxExpirationDate(settingsPtr, BLOCK0_DATE + 600));
+=======
+        const settingsPtr = await retrieveFunds(walletPtr, hexStringToBytes(BLOCK0));
+        await walletSetState(walletPtr, 1000000, DEFAULT_NONCES);
+
+        const tx1 = await walletVote(walletPtr, settingsPtr, proposalPtr, 1, await maxExpirationDate(settingsPtr, BLOCK0_DATE + 600), 0);
+        const tx2 = await walletVote(walletPtr, settingsPtr, proposalPtr, 2, await maxExpirationDate(settingsPtr, BLOCK0_DATE + 600), 1);
+>>>>>>> e8a830b... wallet-cordova: update tests
 
         await fragmentId(new Uint8Array(tx1));
         await fragmentId(new Uint8Array(tx2));
