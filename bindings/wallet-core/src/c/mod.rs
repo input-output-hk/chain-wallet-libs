@@ -167,16 +167,18 @@ pub unsafe fn wallet_confirm_transaction(wallet: WalletPtr, fragment_id: *const 
 ///
 pub unsafe fn wallet_spending_counter(
     wallet: WalletPtr,
-    spending_counter_ptr_out: *mut [u32; 4],
+    spending_counter_ptr_out: *mut u8,
 ) -> Result {
     let wallet = non_null!(wallet);
     let spending_counter = non_null_mut!(spending_counter_ptr_out);
 
     let counters = wallet.spending_counter();
 
-    for i in 0..spending_counter.len() {
-        spending_counter[i] = counters[i].into();
-    }
+    std::ptr::copy_nonoverlapping(
+        counters.as_ptr() as *mut u8,
+        spending_counter as *mut u8,
+        counters.len() * std::mem::size_of::<[u8; 4]>(),
+    );
 
     Result::success()
 }
