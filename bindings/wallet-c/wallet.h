@@ -19,8 +19,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define NONCES_SIZE (8 * 4)
-
 typedef enum Discrimination
 {
   Discrimination_Production = 0,
@@ -51,6 +49,12 @@ typedef struct Fragment
 } Fragment;
 
 typedef struct Fragment *FragmentPtr;
+
+typedef struct SpendingCounters
+{
+  uint8_t *data;
+  uintptr_t len;
+} SpendingCounters;
 
 typedef struct Proposal
 {
@@ -161,6 +165,17 @@ ErrorPtr iohk_jormungandr_block_date_from_system_time(const struct Settings *set
  * in or you may see unexpected behaviors
  */
 void iohk_jormungandr_delete_fragment(FragmentPtr fragment);
+
+/**
+ * delete the inner buffer that was allocated by this library
+ *
+ * # Safety
+ *
+ * This function dereference raw pointers. Even though
+ * the function checks if the pointers are null. Mind not to put random values
+ * in or you may see unexpected behaviors
+ */
+void iohk_jormungandr_delete_spending_counters(struct SpendingCounters spending_counters);
 
 /**
  * deserialize a fragment from bytes
@@ -521,8 +536,7 @@ ErrorPtr iohk_jormungandr_wallet_import_keys(const uint8_t *account_key,
  */
 ErrorPtr iohk_jormungandr_wallet_set_state(WalletPtr wallet,
                                            uint64_t value,
-                                           const uint8_t (*counters)[4],
-                                           uintptr_t counters_len);
+                                           struct SpendingCounters counters);
 
 /**
  * # Safety
@@ -571,9 +585,10 @@ ErrorPtr iohk_jormungandr_wallet_settings_new(struct SettingsInit settings_init,
                                               SettingsPtr *settings_out);
 
 /**
- * get the current spending counter for the (only) account in this wallet
+ * get the current spending counters for the (only) account in this wallet
  *
- * - spending_counter_ptr_out: must point to NONCES_SIZE bytes of writable valid memory
+ * iohk_jormungandr_spending_counters_delete should be called to deallocate the memory when it's
+ * not longer needed
  *
  * # Errors
  *
@@ -586,8 +601,8 @@ ErrorPtr iohk_jormungandr_wallet_settings_new(struct SettingsInit settings_init,
  * in or you may see unexpected behaviors
  *
  */
-ErrorPtr iohk_jormungandr_wallet_spending_counter(WalletPtr wallet,
-                                                  uint8_t *spending_counter_ptr);
+ErrorPtr iohk_jormungandr_wallet_spending_counters(WalletPtr wallet,
+                                                   struct SpendingCounters *spending_counters_ptr);
 
 /**
  * get the total value in the wallet

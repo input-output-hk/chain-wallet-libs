@@ -39,8 +39,6 @@ pub type FragmentPtr = *mut Fragment;
 pub type ErrorPtr = *mut Error;
 pub type EncryptingVoteKeyPtr = *mut EncryptingVoteKey;
 
-pub const NONCES_SIZE: usize = 8 * 4;
-
 /// retrieve a wallet from the given mnemonics, password and protocol magic
 ///
 /// this function will work for all yoroi, daedalus and other wallets
@@ -179,9 +177,10 @@ pub unsafe extern "C" fn iohk_jormungandr_wallet_id(
     wallet_id(wallet as *mut WalletRust, id_out).into_c_api() as ErrorPtr
 }
 
-/// get the current spending counter for the (only) account in this wallet
+/// get the current spending counters for the (only) account in this wallet
 ///
-/// - spending_counter_ptr_out: must point to NONCES_SIZE bytes of writable valid memory
+/// iohk_jormungandr_spending_counters_delete should be called to deallocate the memory when it's
+/// not longer needed
 ///
 /// # Errors
 ///
