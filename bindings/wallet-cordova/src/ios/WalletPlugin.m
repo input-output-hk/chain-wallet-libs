@@ -238,11 +238,11 @@ jormungandr_error_to_plugin_result(ErrorPtr error)
     if (result != nil) {
         pluginResult = jormungandr_error_to_plugin_result(result);
     } else {
-        NSData* returnValue = [NSData dataWithBytes:transaction_out length:len_out];
+        NSData* returnValue = [NSData dataWithBytes:transaction_out.data length:transaction_out.len];
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
                                     messageAsArrayBuffer:returnValue];
 
-        iohk_jormungandr_wallet_delete_buffer(transaction_out, len_out);
+        iohk_jormungandr_wallet_delete_buffer(transaction_out.data, transaction_out.len);
     }
 
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
