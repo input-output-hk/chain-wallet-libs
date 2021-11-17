@@ -136,7 +136,7 @@ pub unsafe extern "C" fn iohk_jormungandr_wallet_id(
 #[no_mangle]
 pub unsafe extern "C" fn iohk_jormungandr_wallet_spending_counter(
     wallet: WalletPtr,
-    spending_counter_ptr: *mut [u32; 4],
+    spending_counter_ptr: *mut u8,
 ) -> ErrorPtr {
     wallet_spending_counter(wallet as *mut WalletRust, spending_counter_ptr).into_c_api()
         as ErrorPtr
