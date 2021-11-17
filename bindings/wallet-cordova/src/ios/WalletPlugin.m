@@ -327,7 +327,7 @@ jormungandr_error_to_plugin_result(ErrorPtr error)
     uint8_t slot_duration = (uint8_t)[slot_duration_raw longLongValue];
     NSDictionary* era = [command.arguments objectAtIndex:5];
     NSString* max_expiry_epochs_raw = [command.arguments objectAtIndex:6];
-    uint8_t max_expiry_epochs = (uint8_t)[slot_duration_raw longLongValue];
+    uint8_t max_expiry_epochs = (uint8_t)[max_expiry_epochs_raw longLongValue];
 
     if ([block0_hash isEqual:[NSNull null]] || [fees isEqual:[NSNull null]]) {
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
