@@ -10,7 +10,7 @@ use chain_impl_mockchain::{
     vote::{Choice, Payload},
 };
 use std::convert::TryInto;
-use wallet::RecoveryBuilder;
+use wallet::{RecoveryBuilder, MAX_LANES};
 
 const BLOCK0: &[u8] = include_bytes!("../../test-vectors/block0");
 const ACCOUNT_KEY: &str = include_str!("../../test-vectors/free_keys/key1.prv");
@@ -30,7 +30,9 @@ fn update_state_overrides_old() {
     account
         .set_state(
             Value(110),
-            (0..4).map(|lane| SpendingCounter::new(lane, 1)).collect(),
+            (0..MAX_LANES)
+                .map(|lane| SpendingCounter::new(lane, 1))
+                .collect(),
         )
         .unwrap();
 
