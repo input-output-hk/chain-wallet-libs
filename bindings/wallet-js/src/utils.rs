@@ -23,6 +23,7 @@ macro_rules! impl_collection {
         #[wasm_bindgen]
         pub struct $collection(Vec<$type>);
 
+        #[allow(clippy::new_without_default)]
         #[wasm_bindgen]
         impl $collection {
             pub fn new() -> $collection {
