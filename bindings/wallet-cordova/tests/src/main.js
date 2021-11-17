@@ -225,12 +225,16 @@ const tests = [
 
         await walletSetState(walletPtr, 1000000, DEFAULT_NONCES);
 
-        // TODO: maybe walletVote should return an object with the both tx and the id
         const tx1 = await walletVote(walletPtr, settingsPtr, proposalPtr, 1, await maxExpirationDate(settingsPtr, BLOCK0_DATE + 600), 0);
         const tx2 = await walletVote(walletPtr, settingsPtr, proposalPtr, 2, await maxExpirationDate(settingsPtr, BLOCK0_DATE + 600), 1);
 
-        await fragmentId(new Uint8Array(tx1));
-        await fragmentId(new Uint8Array(tx2));
+        const id1 = await fragmentId(new Uint8Array(tx1));
+        const id2 = await fragmentId(new Uint8Array(tx2));
+
+        const pendingTransactions = await getPendingTransactions(walletPtr);
+
+        expect(uint8ArrayEquals(new Uint8Array(id1), new Uint8Array(pendingTransactions[0]))).toBe(true);
+        expect(uint8ArrayEquals(new Uint8Array(id2), new Uint8Array(pendingTransactions[1]))).toBe(true);
 
         await deleteSettings(settingsPtr);
         await deleteWallet(walletPtr);
