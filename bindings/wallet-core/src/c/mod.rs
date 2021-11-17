@@ -31,6 +31,7 @@ struct NulPtr;
 struct OutOfBound;
 
 pub const FRAGMENT_ID_LENGTH: usize = 32;
+pub const NONCES_SIZE: usize = 8 * 4;
 
 /// recover a wallet from an account and a list of utxo keys
 ///
@@ -154,6 +155,7 @@ pub unsafe fn wallet_confirm_transaction(wallet: WalletPtr, fragment_id: *const 
 
 /// get the current spending counter for the (only) account in this wallet
 ///
+/// - spending_counter_ptr_out: must point to NONCES_SIZE bytes of writable valid memory
 ///
 /// # Errors
 ///

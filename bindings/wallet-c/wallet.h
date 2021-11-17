@@ -513,7 +513,8 @@ ErrorPtr iohk_jormungandr_wallet_import_keys(const uint8_t *account_key,
  */
 ErrorPtr iohk_jormungandr_wallet_set_state(WalletPtr wallet,
                                            uint64_t value,
-                                           uint32_t counter);
+                                           const uint8_t (*counters)[4],
+                                           uintptr_t counters_len);
 
 /**
  * # Safety
@@ -577,7 +578,7 @@ ErrorPtr iohk_jormungandr_wallet_settings_new(struct SettingsInit settings_init,
  *
  */
 ErrorPtr iohk_jormungandr_wallet_spending_counter(WalletPtr wallet,
-                                                  uint32_t *spending_counter_ptr);
+                                                  uint8_t *spending_counter_ptr);
 
 /**
  * get the total value in the wallet
@@ -630,6 +631,7 @@ ErrorPtr iohk_jormungandr_wallet_vote_cast(WalletPtr wallet,
                                            ProposalPtr proposal,
                                            uint8_t choice,
                                            struct BlockDate valid_until,
+                                           uint8_t lane,
                                            const uint8_t **transaction_out,
                                            uintptr_t *len_out);
 
