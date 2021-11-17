@@ -7,11 +7,12 @@ use std::{
 pub use wallet::Settings as SettingsRust;
 use wallet_core::c::{
     fragment::{fragment_delete, fragment_from_raw, fragment_id},
-    symmetric_cipher_decrypt,
+    spending_counters_delete, symmetric_cipher_decrypt,
     time::BlockDate,
     vote, wallet_delete_error, wallet_delete_proposal, wallet_delete_settings,
-    wallet_delete_wallet, wallet_id, wallet_import_keys, wallet_set_state, wallet_spending_counter,
-    wallet_total_value, wallet_vote_cast,
+    wallet_delete_wallet, wallet_id, wallet_import_keys, wallet_recover, wallet_set_state,
+    wallet_spending_counters, wallet_total_value, wallet_vote_cast, SpendingCounters,
+    TransactionOut,
 };
 use wallet_core::{
     Error as ErrorRust, Fragment as FragmentRust, Proposal as ProposalRust, Wallet as WalletRust,
@@ -193,11 +194,11 @@ pub unsafe extern "C" fn iohk_jormungandr_wallet_id(
 /// in or you may see unexpected behaviors
 ///
 #[no_mangle]
-pub unsafe extern "C" fn iohk_jormungandr_wallet_spending_counter(
+pub unsafe extern "C" fn iohk_jormungandr_wallet_spending_counters(
     wallet: WalletPtr,
-    spending_counter_ptr: *mut u8,
+    spending_counters_ptr: *mut SpendingCounters,
 ) -> ErrorPtr {
-    wallet_spending_counter(wallet as *mut WalletRust, spending_counter_ptr).into_c_api()
+    wallet_spending_counters(wallet as *mut WalletRust, spending_counters_ptr).into_c_api()
         as ErrorPtr
 }
 
@@ -264,10 +265,8 @@ pub unsafe extern "C" fn iohk_jormungandr_wallet_total_value(
 pub unsafe extern "C" fn iohk_jormungandr_wallet_set_state(
     wallet: WalletPtr,
     value: u64,
-    counters: *const [u8; 4],
-    counters_len: usize,
+    counters: SpendingCounters,
 ) -> ErrorPtr {
-    let counters = std::slice::from_raw_parts(counters, counters_len);
     let r = wallet_set_state(wallet as *mut WalletRust, value, counters);
 
     r.into_c_api() as ErrorPtr
@@ -637,4 +636,18 @@ pub extern "C" fn iohk_jormungandr_wallet_delete_proposal(proposal: ProposalPtr)
 #[no_mangle]
 pub unsafe extern "C" fn iohk_jormungandr_delete_fragment(fragment: FragmentPtr) {
     fragment_delete(fragment as *mut FragmentRust);
+}
+
+/// delete the inner buffer that was allocated by this library
+///
+/// # Safety
+///
+/// This function dereference raw pointers. Even though
+/// the function checks if the pointers are null. Mind not to put random values
+/// in or you may see unexpected behaviors
+#[no_mangle]
+pub unsafe extern "C" fn iohk_jormungandr_delete_spending_counters(
+    spending_counters: SpendingCounters,
+) {
+    spending_counters_delete(spending_counters);
 }
