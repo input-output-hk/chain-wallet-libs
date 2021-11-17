@@ -38,6 +38,64 @@ pub type FragmentPtr = *mut Fragment;
 pub type ErrorPtr = *mut Error;
 pub type EncryptingVoteKeyPtr = *mut EncryptingVoteKey;
 
+pub const NONCES_SIZE: usize = 8 * 4;
+
+/// retrieve a wallet from the given mnemonics, password and protocol magic
+///
+/// this function will work for all yoroi, daedalus and other wallets
+/// as it will try every kind of wallet anyway
+///
+/// You can also use this function to recover a wallet even after you have
+/// transferred all the funds to the new format (see the _convert_ function)
+///
+/// The recovered wallet will be returned in `wallet_out`.
+///
+/// # parameters
+///
+/// * mnemonics: a null terminated utf8 string (already normalized NFKD) in english;
+/// * password: pointer to the password (in bytes, can be UTF8 string or a bytes of anything);
+///   this value is optional and passing a null pointer will result in no password;
+/// * password_length: the length of the password;
+/// * wallet_out: a pointer to a pointer. The recovered wallet will be allocated on this pointer;
+///
+/// # errors
+///
+/// The function may fail if:
+///
+/// * the mnemonics are not valid (invalid length or checksum);
+/// * the `wallet_out` is null pointer
+///
+/// On error the function returns a `ErrorPtr`. On success `NULL` is returned.
+/// The `ErrorPtr` can then be observed to gathered details of the error.
+/// Don't forget to call `iohk_jormungandr_wallet_delete_error` to free
+/// the `ErrorPtr` from memory and avoid memory leaks.
+///
+/// # Safety
+///
+/// This function dereference raw pointers. Even though
+/// the function checks if the pointers are null. Mind not to put random values
+/// in or you may see unexpected behaviors
+///
+#[no_mangle]
+pub unsafe extern "C" fn iohk_jormungandr_wallet_recover(
+    mnemonics: *const c_char,
+    password: *const u8,
+    password_length: usize,
+    wallet_out: *mut WalletPtr,
+) -> ErrorPtr {
+    let mnemonics = CStr::from_ptr(mnemonics);
+
+    let mnemonics = mnemonics.to_string_lossy();
+    let r = wallet_recover(
+        &mnemonics,
+        password,
+        password_length,
+        wallet_out as *mut *mut WalletRust,
+    );
+
+    r.into_c_api() as ErrorPtr
+}
+
 /// recover a wallet from an account and a list of utxo keys
 ///
 /// You can also use this function to recover a wallet even after you have
@@ -122,6 +180,7 @@ pub unsafe extern "C" fn iohk_jormungandr_wallet_id(
 
 /// get the current spending counter for the (only) account in this wallet
 ///
+/// - spending_counter_ptr_out: must point to NONCES_SIZE bytes of writable valid memory
 ///
 /// # Errors
 ///
@@ -202,13 +261,13 @@ pub unsafe extern "C" fn iohk_jormungandr_wallet_total_value(
 /// in or you may see unexpected behaviors
 ///
 #[no_mangle]
-pub extern "C" fn iohk_jormungandr_wallet_set_state(
+pub unsafe extern "C" fn iohk_jormungandr_wallet_set_state(
     wallet: WalletPtr,
     value: u64,
     counters: *const [u8; 4],
     counters_len: usize,
 ) -> ErrorPtr {
-    let counters = unsafe { std::slice::from_raw_parts(counters, counters_len) };
+    let counters = std::slice::from_raw_parts(counters, counters_len);
     let r = wallet_set_state(wallet as *mut WalletRust, value, counters);
 
     r.into_c_api() as ErrorPtr

@@ -19,6 +19,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#define NONCES_SIZE (8 * 4)
+
 typedef enum Discrimination
 {
   Discrimination_Production = 0,
@@ -565,6 +567,7 @@ ErrorPtr iohk_jormungandr_wallet_settings_new(struct SettingsInit settings_init,
 /**
  * get the current spending counter for the (only) account in this wallet
  *
+ * - spending_counter_ptr_out: must point to NONCES_SIZE bytes of writable valid memory
  *
  * # Errors
  *

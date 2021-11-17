@@ -33,6 +33,64 @@ struct OutOfBound;
 pub const FRAGMENT_ID_LENGTH: usize = 32;
 pub const NONCES_SIZE: usize = 8 * 4;
 
+/// retrieve a wallet from the given mnemonics, password and protocol magic
+///
+/// this function will work for all yoroi, daedalus and other wallets
+/// as it will try every kind of wallet anyway
+///
+/// You can also use this function to recover a wallet even after you have
+/// transferred all the funds to the new format (see the _convert_ function)
+///
+/// The recovered wallet will be returned in `wallet_out`.
+///
+/// # parameters
+///
+/// * mnemonics: a null terminated utf8 string (already normalized NFKD) in english;
+/// * password: pointer to the password (in bytes, can be UTF8 string or a bytes of anything);
+///   this value is optional and passing a null pointer will result in no password;
+/// * password_length: the length of the password;
+/// * wallet_out: a pointer to a pointer. The recovered wallet will be allocated on this pointer;
+///
+/// # Safety
+///
+/// This function dereference raw pointers (password and wallet_out). Even though
+/// the function checks if the pointers are null. Mind not to put random values
+/// in or you may see unexpected behaviors
+///
+/// # errors
+///
+/// The function may fail if:
+///
+/// * the mnemonics are not valid (invalid length or checksum);
+/// * the `wallet_out` is null pointer
+///
+pub unsafe fn wallet_recover(
+    mnemonics: &str,
+    password: *const u8,
+    password_length: usize,
+    wallet_out: *mut WalletPtr,
+) -> Result {
+    let wallet_out: &mut WalletPtr = if let Some(wallet_out) = wallet_out.as_mut() {
+        wallet_out
+    } else {
+        return Error::invalid_input("wallet_out").with(NulPtr).into();
+    };
+
+    let result = if !password.is_null() && password_length > 0 {
+        todo!()
+    } else {
+        Wallet::recover(mnemonics, &[])
+    };
+
+    match result {
+        Ok(wallet) => {
+            *wallet_out = Box::into_raw(Box::new(wallet));
+            Result::success()
+        }
+        Err(err) => err.into(),
+    }
+}
+
 /// recover a wallet from an account and a list of utxo keys
 ///
 /// You can also use this function to recover a wallet even after you have
@@ -154,8 +212,6 @@ pub unsafe fn wallet_confirm_transaction(wallet: WalletPtr, fragment_id: *const 
 }
 
 /// get the current spending counter for the (only) account in this wallet
-///
-/// - spending_counter_ptr_out: must point to NONCES_SIZE bytes of writable valid memory
 ///
 /// # Errors
 ///
