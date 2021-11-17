@@ -119,13 +119,15 @@ jormungandr_error_to_plugin_result(ErrorPtr error)
     NSString* wallet_ptr_raw = [command.arguments objectAtIndex:0];
 
     WalletPtr wallet_ptr = (WalletPtr)[wallet_ptr_raw longLongValue];
-    uint8_t nonces[NONCES_SIZE];
-    ErrorPtr result = iohk_jormungandr_wallet_spending_counter(wallet_ptr, &nonces);
+
+    SpendingCounters spending_counters;
+
+    ErrorPtr result = iohk_jormungandr_wallet_spending_counters(wallet_ptr, &spending_counters);
 
     if (result != nil) {
         pluginResult = jormungandr_error_to_plugin_result(result);
     } else {
-        NSString* returnValue = [NSString stringWithFormat:@"%u", nonces];
+        NSData* returnValue = [NSData dataWithBytes:spending_counters.data length:spending_counters.len];
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
                                          messageAsString:returnValue];
     }
@@ -179,12 +181,17 @@ jormungandr_error_to_plugin_result(ErrorPtr error)
 
     NSString* wallet_ptr_raw = [command.arguments objectAtIndex:0];
     NSString* value_raw = [command.arguments objectAtIndex:1];
-    NSData* counter_raw = [command.arguments objectAtIndex:2];
+    NSData* counters_raw = [command.arguments objectAtIndex:2];
 
     WalletPtr wallet_ptr = (WalletPtr)[wallet_ptr_raw longLongValue];
     uint64_t value = (uint64_t)[value_raw longLongValue];
 
-    ErrorPtr result = iohk_jormungandr_wallet_set_state(wallet_ptr, value, counter_raw.bytes);
+    SpendingCounters spending_counters = {
+        counters_raw.bytes,
+        counters_raw.length,
+    };
+
+    ErrorPtr result = iohk_jormungandr_wallet_set_state(wallet_ptr, value, spending_counters);
 
     if (result != nil) {
         pluginResult = jormungandr_error_to_plugin_result(result);
