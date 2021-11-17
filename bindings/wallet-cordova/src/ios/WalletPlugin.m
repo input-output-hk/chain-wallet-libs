@@ -125,7 +125,7 @@ jormungandr_error_to_plugin_result(ErrorPtr error)
     if (result != nil) {
         pluginResult = jormungandr_error_to_plugin_result(result);
     } else {
-        NSString* returnValue = [NSString stringWithFormat:@"%u", value];
+        NSString* returnValue = [NSString stringWithFormat:@"%u", nonces];
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
                                          messageAsString:returnValue];
     }
@@ -184,7 +184,7 @@ jormungandr_error_to_plugin_result(ErrorPtr error)
     WalletPtr wallet_ptr = (WalletPtr)[wallet_ptr_raw longLongValue];
     uint64_t value = (uint64_t)[value_raw longLongValue];
 
-    ErrorPtr result = iohk_jormungandr_wallet_set_state(wallet_ptr, value, counter.bytes);
+    ErrorPtr result = iohk_jormungandr_wallet_set_state(wallet_ptr, value, counter_raw.bytes);
 
     if (result != nil) {
         pluginResult = jormungandr_error_to_plugin_result(result);
