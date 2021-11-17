@@ -366,8 +366,7 @@ pub unsafe extern "C" fn iohk_jormungandr_wallet_vote_cast(
     choice: u8,
     valid_until: BlockDate,
     lane: u8,
-    transaction_out: *mut *const u8,
-    len_out: *mut usize,
+    transaction_out: *mut TransactionOut,
 ) -> ErrorPtr {
     let r = wallet_vote_cast(
         wallet as *mut WalletRust,
@@ -377,7 +376,6 @@ pub unsafe extern "C" fn iohk_jormungandr_wallet_vote_cast(
         valid_until,
         lane,
         transaction_out,
-        len_out,
     );
 
     r.into_c_api() as ErrorPtr

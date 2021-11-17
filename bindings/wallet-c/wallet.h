@@ -123,6 +123,12 @@ typedef struct SettingsInit
   uint8_t transaction_max_expiry_epochs;
 } SettingsInit;
 
+typedef struct TransactionOut
+{
+  const uint8_t *data;
+  uintptr_t len;
+} TransactionOut;
+
 /**
  * This function dereference raw pointers. Even though the function checks if
  * the pointers are null. Mind not to put random values in or you may see
@@ -635,7 +641,6 @@ ErrorPtr iohk_jormungandr_wallet_vote_cast(WalletPtr wallet,
                                            uint8_t choice,
                                            struct BlockDate valid_until,
                                            uint8_t lane,
-                                           const uint8_t **transaction_out,
-                                           uintptr_t *len_out);
+                                           struct TransactionOut *transaction_out);
 
 #endif /* IOHK_CHAIN_WALLET_LIBC_ */

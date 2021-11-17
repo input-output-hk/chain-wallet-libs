@@ -217,8 +217,7 @@ jormungandr_error_to_plugin_result(ErrorPtr error)
     uint8_t choice = (uint8_t)[choice_raw intValue];
     uint8_t lane = (uint8_t)[lane_raw intValue];
 
-    uint8_t* transaction_out = nil;
-    uintptr_t len_out;
+    TransactionOut transaction_out;
 
     ErrorPtr result = iohk_jormungandr_wallet_vote_cast(wallet_ptr,
         settings_ptr,
@@ -226,8 +225,8 @@ jormungandr_error_to_plugin_result(ErrorPtr error)
         choice,
         date,
         lane,
-        &transaction_out,
-        &len_out);
+        &transaction_out
+    );
 
     if (result != nil) {
         pluginResult = jormungandr_error_to_plugin_result(result);

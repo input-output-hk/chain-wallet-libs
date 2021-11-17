@@ -304,6 +304,12 @@ pub fn wallet_set_state(wallet: WalletPtr, value: u64, counter: &[[u8; 4]]) -> R
     }
 }
 
+#[repr(C)]
+pub struct TransactionOut {
+    pub data: *const u8,
+    pub len: usize,
+}
+
 /// build the vote cast transaction
 ///
 /// # Errors
@@ -323,8 +329,7 @@ pub unsafe fn wallet_vote_cast(
     choice: u8,
     valid_until: BlockDate,
     lane: u8,
-    transaction_out: *mut *const u8,
-    len_out: *mut usize,
+    transaction_out: *mut TransactionOut,
 ) -> Result {
     let wallet = if let Some(wallet) = wallet.as_mut() {
         wallet
@@ -347,9 +352,6 @@ pub unsafe fn wallet_vote_cast(
     if transaction_out.is_null() {
         return Error::invalid_input("transaction_out").with(NulPtr).into();
     }
-    if len_out.is_null() {
-        return Error::invalid_input("len_out").with(NulPtr).into();
-    }
 
     let choice = Choice::new(choice);
 
@@ -358,8 +360,8 @@ pub unsafe fn wallet_vote_cast(
         Err(err) => return err.into(),
     };
 
-    *transaction_out = transaction.as_ptr();
-    *len_out = transaction.len();
+    (*transaction_out).data = transaction.as_ptr();
+    (*transaction_out).len = transaction.len();
 
     Result::success()
 }
