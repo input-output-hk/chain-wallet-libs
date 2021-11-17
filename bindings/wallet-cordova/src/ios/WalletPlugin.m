@@ -119,8 +119,8 @@ jormungandr_error_to_plugin_result(ErrorPtr error)
     NSString* wallet_ptr_raw = [command.arguments objectAtIndex:0];
 
     WalletPtr wallet_ptr = (WalletPtr)[wallet_ptr_raw longLongValue];
-    uint32_t value;
-    ErrorPtr result = iohk_jormungandr_wallet_spending_counter(wallet_ptr, &value);
+    uint8_t nonces[NONCES_SIZE];
+    ErrorPtr result = iohk_jormungandr_wallet_spending_counter(wallet_ptr, &nonces);
 
     if (result != nil) {
         pluginResult = jormungandr_error_to_plugin_result(result);
@@ -179,13 +179,12 @@ jormungandr_error_to_plugin_result(ErrorPtr error)
 
     NSString* wallet_ptr_raw = [command.arguments objectAtIndex:0];
     NSString* value_raw = [command.arguments objectAtIndex:1];
-    NSString* counter_raw = [command.arguments objectAtIndex:2];
+    NSData* counter_raw = [command.arguments objectAtIndex:2];
 
     WalletPtr wallet_ptr = (WalletPtr)[wallet_ptr_raw longLongValue];
     uint64_t value = (uint64_t)[value_raw longLongValue];
-    uint32_t counter = (uint32_t)[counter_raw longLongValue];
 
-    ErrorPtr result = iohk_jormungandr_wallet_set_state(wallet_ptr, value, counter);
+    ErrorPtr result = iohk_jormungandr_wallet_set_state(wallet_ptr, value, counter.bytes);
 
     if (result != nil) {
         pluginResult = jormungandr_error_to_plugin_result(result);
@@ -205,6 +204,7 @@ jormungandr_error_to_plugin_result(ErrorPtr error)
     NSString* proposal_ptr_raw = [command.arguments objectAtIndex:2];
     NSString* choice_raw = [command.arguments objectAtIndex:3];
     NSDictionary* expirationDate = [command.arguments objectAtIndex:4];
+    NSString* lane_raw = [command.arguments objectAtIndex:5];
 
     uint32_t epoch = (uint32_t)[expirationDate[@"epoch"] longLongValue];
     uint32_t slot = (uint32_t)[expirationDate[@"slot"] longLongValue];
@@ -215,6 +215,7 @@ jormungandr_error_to_plugin_result(ErrorPtr error)
     SettingsPtr settings_ptr = (SettingsPtr)[settings_ptr_raw longLongValue];
     ProposalPtr proposal_ptr = (ProposalPtr)[proposal_ptr_raw longLongValue];
     uint8_t choice = (uint8_t)[choice_raw intValue];
+    uint8_t lane = (uint8_t)[lane_raw intValue];
 
     uint8_t* transaction_out = nil;
     uintptr_t len_out;
@@ -224,6 +225,7 @@ jormungandr_error_to_plugin_result(ErrorPtr error)
         proposal_ptr,
         choice,
         date,
+        lane,
         &transaction_out,
         &len_out);
 
