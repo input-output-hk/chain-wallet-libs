@@ -274,8 +274,7 @@ jormungandr_error_to_plugin_result(ErrorPtr error)
     ProposalPtr proposal_ptr = (ProposalPtr)[proposal_ptr_raw longLongValue];
     uint8_t choice = (uint8_t)[choice_raw intValue];
 
-    uint8_t* transaction_out = nil;
-    uintptr_t len_out;
+    TransactionOut transaction_out;
 
     ErrorPtr result = iohk_jormungandr_wallet_vote_cast(wallet_ptr,
         settings_ptr,
@@ -283,12 +282,12 @@ jormungandr_error_to_plugin_result(ErrorPtr error)
         choice,
         date,
         &transaction_out,
-        &len_out);
+    );
 
     if (result != nil) {
         pluginResult = jormungandr_error_to_plugin_result(result);
     } else {
-        NSData* returnValue = [NSData dataWithBytes:transaction_out length:len_out];
+        NSData* returnValue = [NSData dataWithBytes:transaction_out.data length:transaction_out.len];
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
                                     messageAsArrayBuffer:returnValue];
 
