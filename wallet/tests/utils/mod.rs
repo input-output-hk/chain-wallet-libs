@@ -1,6 +1,7 @@
 use chain_impl_mockchain::{
     accounting::account::SpendingCounterIncreasing,
     block::Block,
+    certificate::VotePlanId,
     fragment::{Fragment, FragmentRaw},
     ledger::{Error as LedgerError, Ledger},
     value::Value,
@@ -33,6 +34,15 @@ impl State {
 
     pub fn settings(&self) -> Result<Settings, LedgerError> {
         Settings::new(&self.block0)
+    }
+
+    #[allow(dead_code)]
+    pub fn active_vote_plans(&self) -> Vec<VotePlanId> {
+        self.ledger
+            .active_vote_plans()
+            .into_iter()
+            .map(|plan| plan.id)
+            .collect()
     }
 
     pub fn apply_fragments<'a, F>(&'a mut self, fragments: F) -> Result<(), LedgerError>
