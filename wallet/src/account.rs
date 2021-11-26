@@ -2,6 +2,7 @@ use super::transaction::AccountWitnessBuilder;
 use crate::scheme::{on_tx_input_and_witnesses, on_tx_output};
 use crate::states::States;
 use chain_crypto::{Ed25519, Ed25519Extended, PublicKey, SecretKey};
+use chain_impl_mockchain::accounting::account::SpendingCounterIncreasing;
 use chain_impl_mockchain::{
     account::SpendingCounter,
     fragment::{Fragment, FragmentId},
@@ -19,21 +20,10 @@ pub struct Wallet {
     state: States<FragmentId, State>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct State {
     value: Value,
-    counters: Vec<SpendingCounter>,
-}
-
-impl Default for State {
-    fn default() -> Self {
-        Self {
-            value: Default::default(),
-            counters: (0..MAX_LANES)
-                .map(|lane| SpendingCounter::new(lane, 0))
-                .collect(),
-        }
-    }
+    counters: SpendingCounterIncreasing,
 }
 
 pub struct WalletBuildTx<'a> {
@@ -49,8 +39,10 @@ pub enum Error {
     NotEnoughFunds { current: Value, needed: Value },
     #[error("invalid lane for spending counter")]
     InvalidLane,
-    #[error("invalid spending counters")]
-    InvalidSpendingCounters,
+    #[error("malformed spending counters")]
+    MalformedSpendingCounters,
+    #[error("spending counter does not match current state")]
+    NonMonotonicSpendingCounter,
 }
 
 enum EitherAccount {
@@ -91,15 +83,8 @@ impl Wallet {
     /// TODO: change to a constructor/initializator?, or just make it so it resets the state
     ///
     pub fn set_state(&mut self, value: Value, counters: Vec<SpendingCounter>) -> Result<(), Error> {
-        if counters.len() != MAX_LANES {
-            return Err(Error::InvalidSpendingCounters);
-        }
-
-        for (c, l) in counters.iter().zip(0..MAX_LANES) {
-            if c.lane() != l {
-                return Err(Error::InvalidSpendingCounters);
-            }
-        }
+        let counters = SpendingCounterIncreasing::new_from_counters(counters)
+            .ok_or(Error::MalformedSpendingCounters)?;
 
         self.state = States::new(FragmentId::zero_hash(), State { value, counters });
 
@@ -107,7 +92,11 @@ impl Wallet {
     }
 
     pub fn spending_counter(&self) -> Vec<SpendingCounter> {
-        self.state.last_state().state().counters.clone()
+        self.state
+            .last_state()
+            .state()
+            .counters
+            .get_valid_counters()
     }
 
     pub fn value(&self) -> Value {
@@ -163,6 +152,7 @@ impl Wallet {
 
         let current_counter = *state
             .counters
+            .get_valid_counters()
             .get(lane as usize)
             .ok_or(Error::InvalidLane)?;
 
@@ -183,9 +173,13 @@ impl Wallet {
         })
     }
 
-    pub fn check_fragment(&mut self, fragment_id: &FragmentId, fragment: &Fragment) -> bool {
+    pub fn check_fragment(
+        &mut self,
+        fragment_id: &FragmentId,
+        fragment: &Fragment,
+    ) -> Result<bool, Error> {
         if self.state.contains(fragment_id) {
-            return true;
+            return Ok(true);
         }
 
         let state = self.state.last_state().state();
@@ -211,15 +205,10 @@ impl Wallet {
                                     spending,
                                     _,
                                 ) => increment_counter = Some(spending),
-                                _ => unreachable!(),
+                                _ => unreachable!("wrong witness type in account input"),
                             }
                         }
                     }
-
-                    // TODO: check monotonicity by signing and comparing
-                    // if let Witness::Account(witness) = witness {
-                    //
-                    // }
                 });
                 on_tx_output(fragment, |(_, output)| {
                     if output
@@ -236,17 +225,10 @@ impl Wallet {
         };
 
         let counters = if let Some(counter) = increment_counter {
-            state
-                .counters
-                .iter()
-                .map(|current| {
-                    if *current == counter {
-                        counter.increment()
-                    } else {
-                        *current
-                    }
-                })
-                .collect()
+            let mut new = state.counters.clone();
+            new.next_verify(counter)
+                .map_err(|_| Error::NonMonotonicSpendingCounter)?;
+            new
         } else {
             state.counters.clone()
         };
@@ -258,7 +240,7 @@ impl Wallet {
 
         self.state.push(*fragment_id, new_state);
 
-        at_least_one_output || increment_counter.is_some()
+        Ok(at_least_one_output || increment_counter.is_some())
     }
 }
 
@@ -283,21 +265,10 @@ impl<'a> WalletBuildTx<'a> {
     }
 
     pub fn add_fragment_id(self, fragment_id: FragmentId) {
-        let counters = self
-            .wallet
-            .state
-            .last_state()
-            .state()
-            .counters
-            .iter()
-            .map(|counter| {
-                if *counter == self.current_counter {
-                    self.current_counter.increment()
-                } else {
-                    *counter
-                }
-            })
-            .collect();
+        let mut counters = self.wallet.state.last_state().state().counters.clone();
+
+        // the counter comes from the current state, so this shouldn't panic
+        counters.next_verify(self.current_counter).unwrap();
 
         self.wallet.state.push(
             fragment_id,
