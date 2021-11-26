@@ -238,8 +238,8 @@ pub unsafe fn wallet_spending_counters(
 
     let raw_ptr = Box::into_raw(counters);
 
-    (*spending_counters_out).data = raw_ptr as *mut u8;
-    (*spending_counters_out).len = len * 4;
+    (*spending_counters_out).data = raw_ptr as *mut u32;
+    (*spending_counters_out).len = len;
 
     Result::success()
 }
@@ -281,7 +281,7 @@ pub unsafe fn wallet_total_value(wallet: WalletPtr, total_out: *mut u64) -> Resu
 
 #[repr(C)]
 pub struct SpendingCounters {
-    pub data: *mut u8,
+    pub data: *mut u32,
     pub len: usize,
 }
 
@@ -308,10 +308,9 @@ pub fn wallet_set_state(wallet: WalletPtr, value: u64, nonces: SpendingCounters)
 
     let value = Value(value);
 
-    let nonces: &[[u8; 4]] =
-        unsafe { std::slice::from_raw_parts(nonces.data as *const [u8; 4], nonces.len) };
+    let nonces = unsafe { std::slice::from_raw_parts_mut(nonces.data, nonces.len) }.to_vec();
 
-    match wallet.set_state(value, nonces.to_vec()) {
+    match wallet.set_state(value, nonces) {
         Ok(_) => Result::success(),
         Err(e) => e.into(),
     }
@@ -472,7 +471,12 @@ pub fn wallet_delete_proposal(proposal: ProposalPtr) {
 /// This function should only be called with a structure returned by this library.
 ///
 pub unsafe fn spending_counters_delete(spending_counters: SpendingCounters) {
-    delete_buffer(spending_counters.data, spending_counters.len);
+    let SpendingCounters { data, len } = spending_counters;
+    if !data.is_null() {
+        let data = std::slice::from_raw_parts_mut(data, len);
+        let data = Box::from_raw(data as *mut [u32]);
+        std::mem::drop(data);
+    }
 }
 
 /// Delete a binary buffer that was returned by this library alongside with its

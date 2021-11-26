@@ -70,11 +70,11 @@ impl Wallet {
 
     /// get the current spending counter
     ///
-    pub fn spending_counter(&self) -> Vec<[u8; 4]> {
+    pub fn spending_counter(&self) -> Vec<u32> {
         self.account
             .spending_counter()
             .into_iter()
-            .map(SpendingCounter::to_bytes)
+            .map(SpendingCounter::into)
             .collect()
     }
 
@@ -100,14 +100,11 @@ impl Wallet {
     /// before doing any transactions, otherwise future transactions may fail
     /// to be accepted by the blockchain nodes because of an invalid witness
     /// signature.
-    pub fn set_state(&mut self, value: Value, counter: Vec<[u8; 4]>) -> Result<(), Error> {
+    pub fn set_state(&mut self, value: Value, counters: Vec<u32>) -> Result<(), Error> {
         self.account
             .set_state(
                 value,
-                counter
-                    .into_iter()
-                    .map(SpendingCounter::from_bytes)
-                    .collect(),
+                counters.into_iter().map(SpendingCounter::from).collect(),
             )
             .map_err(|_| Error::invalid_spending_counters())
     }

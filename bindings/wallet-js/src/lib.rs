@@ -127,7 +127,7 @@ impl Wallet {
         self.0
             .set_state(
                 wallet_core::Value(value),
-                counters.0.into_iter().map(|c| c.0.to_bytes()).collect(),
+                counters.0.into_iter().map(|c| c.0.into()).collect(),
             )
             .map_err(|e| JsValue::from(e.to_string()))
     }
