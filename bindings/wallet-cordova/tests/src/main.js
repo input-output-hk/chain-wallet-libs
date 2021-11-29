@@ -15,16 +15,16 @@ PASSWORD[2] = keys.password[2];
 PASSWORD[3] = keys.password[3];
 const VOTE_ENCRYPTION_KEY = 'ristretto255_votepk1nc988wtjlrm5k0z43088p0rrvd5yhvc96k7zh99p6w74gupxggtqyx4792';
 
-const DEFAULT_NONCES = new Uint8Array([
-    0, 0, 0, (0 << 5),
-    0, 0, 0, (1 << 5),
-    0, 0, 0, (2 << 5),
-    0, 0, 0, (3 << 5),
-    0, 0, 0, (4 << 5),
-    0, 0, 0, (5 << 5),
-    0, 0, 0, (6 << 5),
-    0, 0, 0, (7 << 5),
-]);
+const DEFAULT_NONCES = [
+    (2 ** 29) * 0,
+    (2 ** 29) * 1,
+    (2 ** 29) * 2,
+    (2 ** 29) * 3,
+    (2 ** 29) * 4,
+    (2 ** 29) * 5,
+    (2 ** 29) * 6,
+    (2 ** 29) * 7,
+];
 
 // TODO: write settings getter for this
 const BLOCK0_DATE = 1586637936;
@@ -33,8 +33,8 @@ const SLOTS_PER_EPOCH = 100;
 
 let promisifyP = f => promisify(primitives, f)
 const importKeys = promisifyP(primitives.walletImportKeys);
-const spendingCounter = promisifyP(primitives.walletSpendingCounter);
 const walletId = promisifyP(primitives.walletId);
+const spendingCounters = promisifyP(primitives.walletSpendingCounters);
 const totalFunds = promisifyP(primitives.walletTotalFunds);
 const setState = promisifyP(primitives.walletSetState);
 const deleteWallet = promisifyP(primitives.walletDelete);
@@ -97,16 +97,16 @@ const tests = [
 
         await walletSetState(walletPtr, 1000000, DEFAULT_NONCES);
 
-        expect(uint8ArrayEquals(new Uint8Array(await spendingCounter(walletPtr)), DEFAULT_NONCES)).toBe(true);
+        expect(uint8ArrayEquals(new Uint8Array(await spendingCounters(walletPtr)), new Uint8Array(DEFAULT_NONCES))).toBe(true);
 
         await walletVote(walletPtr, settingsPtr, proposalPtr, 0, await maxExpirationDate(settingsPtr, BLOCK0_DATE + 600), 0);
 
-        const noncesAfterVote = new Uint8Array(await spendingCounter(walletPtr));
+        const noncesAfterVote = new Uint8Array(await spendingCounters(walletPtr));
 
         const expectedNoncesAfter = DEFAULT_NONCES.slice();
         expectedNoncesAfter[0] = 1;
 
-        expect(uint8ArrayEquals(new Uint8Array(noncesAfterVote), expectedNoncesAfter)).toBe(true);
+        expect(uint8ArrayEquals(new Uint8Array(noncesAfterVote), new Uint8Array(expectedNoncesAfter))).toBe(true);
 
         await deleteSettings(settingsPtr);
         await deleteWallet(walletPtr);

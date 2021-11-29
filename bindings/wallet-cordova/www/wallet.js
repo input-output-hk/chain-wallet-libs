@@ -130,10 +130,10 @@ var plugin = {
 
     /**
      * @param {string} ptr a pointer to a wallet
-     * @param {function} successCallback returns a number
+     * @param {function} successCallback returns an array of spending counters
      * @param {errorCallback} errorCallback this function should not fail
      */
-    walletSpendingCounter: function (ptr, successCallback, errorCallback) {
+    walletSpendingCounters: function (ptr, successCallback, errorCallback) {
         argscheck.checkArgs('sff', 'walletTotalFunds', arguments);
 
         exec(successCallback, errorCallback, NATIVE_CLASS_NAME, WALLET_SPENDING_COUNTER_ACTION_TAG, [ptr]);
@@ -177,15 +177,14 @@ var plugin = {
      * this function may fail if the wallet pointer is null;
      * @param {string} ptr a pointer to a Wallet object obtained with WalletRestore
      * @param {number} value
-     * @param {Uint8Array} nonces
+     * @param {number[]} an array of numbers between 0 and 2^32
      * @param {function} successCallback
      * @param {function} errorCallback
      *
      */
     walletSetState: function (ptr, value, nonces, successCallback, errorCallback) {
-        argscheck.checkArgs('sn*ff', 'walletSetState', arguments);
-        checkUint8Array({ name: 'walletSetState', testee: nonces });
-        exec(successCallback, errorCallback, NATIVE_CLASS_NAME, WALLET_SET_STATE_ACTION_TAG, [ptr, value, nonces.buffer]);
+        argscheck.checkArgs('snaff', 'walletSetState', arguments);
+        exec(successCallback, errorCallback, NATIVE_CLASS_NAME, WALLET_SET_STATE_ACTION_TAG, [ptr, value, nonces]);
     },
 
     /**
