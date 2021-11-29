@@ -52,7 +52,7 @@ typedef struct Fragment *FragmentPtr;
 
 typedef struct SpendingCounters
 {
-  uint8_t *data;
+  uint32_t *data;
   uintptr_t len;
 } SpendingCounters;
 
