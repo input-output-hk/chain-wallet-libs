@@ -130,7 +130,7 @@ jormungandr_error_to_plugin_result(ErrorPtr error)
         NSMutableArray *returnValue = [NSMutableArray new];
 
         for(int i = 0; i < 8; i++){
-            [returnValue addObject:spending_counters.data[i]];
+            [returnValue addObject:@(spending_counters.data[i])];
         }
 
         iohk_jormungandr_delete_spending_counters(spending_counters);
