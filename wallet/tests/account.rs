@@ -69,7 +69,7 @@ fn cast_vote() {
 
     for i in 0..16 {
         let payload = Payload::Public { choice };
-        let cast = VoteCast::new(vote_plan_id.clone().into(), i, payload);
+        let cast = VoteCast::new(vote_plan_id.clone(), i, payload);
 
         let mut builder = wallet::TransactionBuilder::new(
             &settings,
