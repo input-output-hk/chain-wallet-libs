@@ -79,6 +79,8 @@ class WalletPlugin
             "WALLET_CONFIRM_TRANSACTION" -> walletConfirmTransaction(args, callbackContext)
             "WALLET_CONVERT" -> walletConvert(args, callbackContext)
             "CONVERSION_TRANSACTIONS_SIZE" -> conversionTransactionsSize(args, callbackContext)
+            "CONVERSION_TRANSACTIONS_GET" -> conversionTransactionsGet(args, callbackContext)
+            "CONVERSION_IGNORED" -> conversionIgnored(args, callbackContext)
             "PENDING_TRANSACTIONS_SIZE" -> pendingTransactionsSize(args, callbackContext)
             "PENDING_TRANSACTIONS_GET" -> pendingTransactionsGet(args, callbackContext)
             "BLOCK_DATE_FROM_SYSTEM_TIME" -> blockDateFromSystemTime(args, callbackContext)
@@ -90,7 +92,11 @@ class WalletPlugin
             "SETTINGS_DELETE" -> settingsDelete(args, callbackContext)
             "PROPOSAL_DELETE" -> proposalDelete(args, callbackContext)
             "PENDING_TRANSACTIONS_DELETE" -> pendingTransactionsDelete(args, callbackContext)
-            else -> return false
+            "CONVERSION_DELETE" -> conversionDelete(args, callbackContext)
+            else -> {
+                Log.w(TAG, "not found: $action")
+                return false
+            }
         }
         return true
     }
@@ -393,7 +399,7 @@ class WalletPlugin
                 )
                 val conversionId = nextConversionId.incrementAndGet()
                 conversionPool[conversionId] = conversion!!
-                callbackContext.success(conversionId)
+                callbackContext.success(conversionId.toString())
             } catch (e: Exception) {
                 callbackContext.error(e.message)
             }
@@ -530,37 +536,37 @@ class WalletPlugin
         }
     }
 
-    // @ExperimentalUnsignedTypes
-    // @Throws(JSONException::class)
-    // private fun conversionTransactionsGet(args: CordovaArgs, callbackContext: CallbackContext) {
-    //     val conversionId = args.getInt(0)
-    //     val index = args.getInt(1)
-    //     val conversion = conversionPool[conversionId]
-    //     try {
-    //         val transaction: ByteArray = conversion?.fragments?.get(index).serialize().toUbyteArray().toByteArray()
-    //         callbackContext.success(transaction)
-    //     } catch (e: Exception) {
-    //         callbackContext.error(e.message)
-    //     }
-    // }
+    @ExperimentalUnsignedTypes
+    @Throws(JSONException::class)
+    private fun conversionTransactionsGet(args: CordovaArgs, callbackContext: CallbackContext) {
+        val conversionId = args.getInt(0)
+        val index = args.getInt(1)
+        val conversion = conversionPool[conversionId]
+        try {
+            val transaction: ByteArray? = conversion?.fragments?.get(index)?.serialize()?.toUByteArray()?.toByteArray()
+            callbackContext.success(transaction)
+        } catch (e: Exception) {
+            callbackContext.error(e.message)
+        }
+    }
 
-    // @ExperimentalUnsignedTypes
-    // @Throws(JSONException::class)
-    // private fun conversionIgnored(args: CordovaArgs, callbackContext: CallbackContext) {
-    //     val conversionId = args.getInt(0)
-    //     val conversion = conversionPool[conversionId]
+    @ExperimentalUnsignedTypes
+    @Throws(JSONException::class)
+    private fun conversionIgnored(args: CordovaArgs, callbackContext: CallbackContext) {
+        val conversionId = args.getInt(0)
+        val conversion = conversionPool[conversionId]
 
-    //     try {
-    //         val value = conversion?.ignoredValue
-    //         val count = conversion?.ignoredCount
+        try {
+            val value = conversion?.ignoredValue
+            val count = conversion?.ignoredCount
 
-    //         val json = JSONObject().put("value", value).put("ignored", count)
-    //         callbackContext.success(json)
+            val json = JSONObject().put("value", value).put("ignored", count)
+            callbackContext.success(json)
 
-    //     } catch (e: Exception) {
-    //         callbackContext.error(e.message)
-    //     }
-    // }
+        } catch (e: Exception) {
+            callbackContext.error(e.message)
+        }
+    }
 
     @ExperimentalUnsignedTypes
     @Throws(JSONException::class)
@@ -604,6 +610,18 @@ class WalletPlugin
         val pid: Int = args.getInt(0)
         try {
             pendingTransactionsPool.remove(pid)
+            callbackContext.success()
+        } catch (e: Exception) {
+            callbackContext.error(e.message)
+        }
+    }
+
+    @ExperimentalUnsignedTypes
+    @Throws(JSONException::class)
+    private fun conversionDelete(args: CordovaArgs, callbackContext: CallbackContext) {
+        val cid: Int = args.getInt(0)
+        try {
+            conversionPool.remove(cid)
             callbackContext.success()
         } catch (e: Exception) {
             callbackContext.error(e.message)
