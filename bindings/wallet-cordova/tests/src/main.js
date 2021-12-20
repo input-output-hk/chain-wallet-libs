@@ -24,6 +24,7 @@ const restoreWallet = promisifyP(primitives.walletRestore);
 const importKeys = promisifyP(primitives.walletImportKeys);
 const retrieveFunds = promisifyP(primitives.walletRetrieveFunds);
 const spendingCounter = promisifyP(primitives.walletSpendingCounter);
+const walletId = promisifyP(primitives.walletId);
 const totalFunds = promisifyP(primitives.walletTotalFunds);
 const convertWallet = promisifyP(primitives.walletConvert);
 const setState = promisifyP(primitives.walletSetState);
@@ -63,6 +64,10 @@ const tests = [
         expect(settingsPtr !== 0).toBe(true);
         const funds = await totalFunds(walletPtr);
         expect(parseInt(funds)).toBe(21000);
+
+        const accountId = await walletId(walletPtr);
+
+        uint8ArrayEquals(accountId, hexStringToBytes(keys.account.account_id));
 
         await deleteSettings(settingsPtr);
         await deleteWallet(walletPtr);

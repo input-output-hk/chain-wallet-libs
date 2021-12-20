@@ -9,7 +9,6 @@ import java.text.Normalizer
 import java.text.Normalizer.Form
 import java.util.concurrent.atomic.AtomicInteger
 
-
 class WalletPlugin
 /**
  * Constructor.
@@ -74,6 +73,7 @@ class WalletPlugin
             "WALLET_VOTE" -> walletVote(args, callbackContext)
             "WALLET_TOTAL_FUNDS" -> walletTotalFunds(args, callbackContext)
             "WALLET_SPENDING_COUNTER" -> walletSpendingCounter(args, callbackContext)
+            "WALLET_ID" -> walletId(args, callbackContext)
             "WALLET_SET_STATE" -> walletSetState(args, callbackContext)
             "WALLET_PENDING_TRANSACTIONS" -> walletPendingTransactions(args, callbackContext)
             "WALLET_CONFIRM_TRANSACTION" -> walletConfirmTransaction(args, callbackContext)
@@ -325,6 +325,20 @@ class WalletPlugin
         val wallet = wallets[walletId]
         try {
             callbackContext.success(wallet?.spendingCounter().toString())
+        } catch (e: Exception) {
+            callbackContext.error(e.message)
+        }
+    }
+
+    @ExperimentalUnsignedTypes
+    @Throws(JSONException::class)
+    private fun walletId(args: CordovaArgs, callbackContext: CallbackContext) {
+        val walletId = args.getInt(0)
+        val wallet = wallets[walletId]
+
+        try {
+            val id = wallet?.accountId()?.toUByteArray()?.toByteArray()
+            callbackContext.success(id)
         } catch (e: Exception) {
             callbackContext.error(e.message)
         }
