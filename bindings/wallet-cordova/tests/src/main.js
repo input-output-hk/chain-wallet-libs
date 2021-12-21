@@ -3,7 +3,7 @@ import "regenerator-runtime/runtime";
 
 const primitives = require('wallet-cordova-plugin.wallet');
 
-const { hexStringToBytes, promisify, uint8ArrayEquals } = require('./src/utils.js');
+const { hexStringToBytes, promisify, uint8ArrayEquals, uint32ArrayEquals } = require('./src/utils.js');
 const keys = require('../../../test-vectors/free_keys/keys.json');
 const genesis = require('../../../test-vectors/block0.json');
 const BLOCK0_ID = genesis.id;
@@ -69,7 +69,7 @@ const tests = [
 
         const accountId = await walletId(walletPtr);
 
-        uint8ArrayEquals(accountId, hexStringToBytes(keys.account.account_id));
+        uint8ArrayEquals(new Uint8Array(accountId), hexStringToBytes(keys.account.account_id));
 
         await deleteSettings(settingsPtr);
         await deleteWallet(walletPtr);
@@ -96,17 +96,16 @@ const tests = [
         const settingsPtr = await defaultSettings();
 
         await walletSetState(walletPtr, 1000000, DEFAULT_NONCES);
-
-        expect(uint8ArrayEquals(new Uint8Array(await spendingCounters(walletPtr)), new Uint8Array(DEFAULT_NONCES))).toBe(true);
+        expect(uint32ArrayEquals(new Uint32Array(await spendingCounters(walletPtr)), new Uint32Array(DEFAULT_NONCES))).toBe(true);
 
         await walletVote(walletPtr, settingsPtr, proposalPtr, 0, await maxExpirationDate(settingsPtr, BLOCK0_DATE + 600), 0);
 
-        const noncesAfterVote = new Uint8Array(await spendingCounters(walletPtr));
+        const noncesAfterVote = new Uint32Array(await spendingCounters(walletPtr));
 
         const expectedNoncesAfter = DEFAULT_NONCES.slice();
         expectedNoncesAfter[0] = 1;
 
-        expect(uint8ArrayEquals(new Uint8Array(noncesAfterVote), new Uint8Array(expectedNoncesAfter))).toBe(true);
+        expect(uint32ArrayEquals(new Uint32Array(noncesAfterVote), new Uint32Array(expectedNoncesAfter))).toBe(true);
 
         await deleteSettings(settingsPtr);
         await deleteWallet(walletPtr);
