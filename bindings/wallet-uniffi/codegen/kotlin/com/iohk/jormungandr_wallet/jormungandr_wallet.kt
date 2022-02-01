@@ -21,6 +21,7 @@ import com.sun.jna.Library
 import com.sun.jna.Native
 import com.sun.jna.Pointer
 import com.sun.jna.Structure
+import com.sun.jna.ptr.ByReference
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.atomic.AtomicBoolean
@@ -42,15 +43,19 @@ open class RustBuffer : Structure() {
 
     companion object {
         internal fun alloc(size: Int = 0) = rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_a148_rustbuffer_alloc(size, status)
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_451a_rustbuffer_alloc(size, status).also {
+                if(it.data == null) {
+                   throw RuntimeException("RustBuffer.alloc() returned null data pointer (size=${size})")
+               }
+            }
         }
 
         internal fun free(buf: RustBuffer.ByValue) = rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_a148_rustbuffer_free(buf, status)
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_451a_rustbuffer_free(buf, status)
         }
 
         internal fun reserve(buf: RustBuffer.ByValue, additional: Int) = rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_a148_rustbuffer_reserve(buf, additional, status)
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_451a_rustbuffer_reserve(buf, additional, status)
         }
     }
 
@@ -59,6 +64,25 @@ open class RustBuffer : Structure() {
         this.data?.getByteBuffer(0, this.len.toLong())?.also {
             it.order(ByteOrder.BIG_ENDIAN)
         }
+}
+
+/**
+ * The equivalent of the `*mut RustBuffer` type.
+ * Required for callbacks taking in an out pointer.
+ *
+ * Size is the sum of all values in the struct.
+ */
+class RustBufferByReference : ByReference(16) {
+    /**
+     * Set the pointed-to `RustBuffer` to the given value.
+     */
+    fun setValue(value: RustBuffer.ByValue) {
+        // NOTE: The offsets are as they are in the C-like struct.
+        val pointer = getPointer()
+        pointer.setInt(0, value.capacity)
+        pointer.setInt(4, value.len)
+        pointer.setPointer(8, value.data)
+    }
 }
 
 // This is a helper for safely passing byte references into the rust code.
@@ -298,115 +322,115 @@ internal interface _UniFFILib : Library {
         }
     }
 
-    fun ffi_jormungandr_wallet_a148_Wallet_object_free(ptr: Pointer,
+    fun ffi_jormungandr_wallet_451a_Wallet_object_free(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun jormungandr_wallet_a148_Wallet_new(account_key: Pointer,utxo_keys: RustBuffer.ByValue,
+    fun jormungandr_wallet_451a_Wallet_new(account_key: Pointer,utxo_keys: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Pointer
 
-    fun jormungandr_wallet_a148_Wallet_from_mnemonics(mnemonics: RustBuffer.ByValue,password: RustBuffer.ByValue,
+    fun jormungandr_wallet_451a_Wallet_from_mnemonics(mnemonics: RustBuffer.ByValue,password: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Pointer
 
-    fun jormungandr_wallet_a148_Wallet_convert(ptr: Pointer,settings: Pointer,valid_until: RustBuffer.ByValue,
+    fun jormungandr_wallet_451a_Wallet_convert(ptr: Pointer,settings: Pointer,valid_until: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun jormungandr_wallet_a148_Wallet_set_state(ptr: Pointer,value: Long,counter: RustBuffer.ByValue,
+    fun jormungandr_wallet_451a_Wallet_set_state(ptr: Pointer,value: Long,counter: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun jormungandr_wallet_a148_Wallet_vote(ptr: Pointer,settings: Pointer,proposal: RustBuffer.ByValue,choice: Byte,valid_until: RustBuffer.ByValue,lane: Byte,
+    fun jormungandr_wallet_451a_Wallet_vote(ptr: Pointer,settings: Pointer,proposal: RustBuffer.ByValue,choice: Byte,valid_until: RustBuffer.ByValue,lane: Byte,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun jormungandr_wallet_a148_Wallet_confirm_transaction(ptr: Pointer,fragment_id: RustBuffer.ByValue,
+    fun jormungandr_wallet_451a_Wallet_confirm_transaction(ptr: Pointer,fragment_id: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun jormungandr_wallet_a148_Wallet_pending_transactions(ptr: Pointer,
+    fun jormungandr_wallet_451a_Wallet_pending_transactions(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun jormungandr_wallet_a148_Wallet_account_id(ptr: Pointer,
+    fun jormungandr_wallet_451a_Wallet_account_id(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun jormungandr_wallet_a148_Wallet_spending_counters(ptr: Pointer,
+    fun jormungandr_wallet_451a_Wallet_spending_counters(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun jormungandr_wallet_a148_Wallet_total_value(ptr: Pointer,
+    fun jormungandr_wallet_451a_Wallet_total_value(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): Long
 
-    fun jormungandr_wallet_a148_Wallet_retrieve_funds(ptr: Pointer,block0: RustBuffer.ByValue,
+    fun jormungandr_wallet_451a_Wallet_retrieve_funds(ptr: Pointer,block0: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Pointer
 
-    fun ffi_jormungandr_wallet_a148_SecretKeyEd25519Extended_object_free(ptr: Pointer,
+    fun ffi_jormungandr_wallet_451a_SecretKeyEd25519Extended_object_free(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun jormungandr_wallet_a148_SecretKeyEd25519Extended_new(raw: RustBuffer.ByValue,
+    fun jormungandr_wallet_451a_SecretKeyEd25519Extended_new(raw: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Pointer
 
-    fun ffi_jormungandr_wallet_a148_Fragment_object_free(ptr: Pointer,
+    fun ffi_jormungandr_wallet_451a_Fragment_object_free(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun jormungandr_wallet_a148_Fragment_new(raw: RustBuffer.ByValue,
+    fun jormungandr_wallet_451a_Fragment_new(raw: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Pointer
 
-    fun jormungandr_wallet_a148_Fragment_id(ptr: Pointer,
+    fun jormungandr_wallet_451a_Fragment_id(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun jormungandr_wallet_a148_Fragment_serialize(ptr: Pointer,
+    fun jormungandr_wallet_451a_Fragment_serialize(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun ffi_jormungandr_wallet_a148_Settings_object_free(ptr: Pointer,
+    fun ffi_jormungandr_wallet_451a_Settings_object_free(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun jormungandr_wallet_a148_Settings_new(settings: RustBuffer.ByValue,
+    fun jormungandr_wallet_451a_Settings_new(settings: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Pointer
 
-    fun jormungandr_wallet_a148_Settings_settings_raw(ptr: Pointer,
+    fun jormungandr_wallet_451a_Settings_settings_raw(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun jormungandr_wallet_a148_block_date_from_system_time(settings: Pointer,unix_epoch: Long,
+    fun jormungandr_wallet_451a_block_date_from_system_time(settings: Pointer,unix_epoch: Long,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun jormungandr_wallet_a148_max_expiration_date(settings: Pointer,current_time: Long,
+    fun jormungandr_wallet_451a_max_expiration_date(settings: Pointer,current_time: Long,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun jormungandr_wallet_a148_symmetric_cipher_decrypt(password: RustBuffer.ByValue,ciphertext: RustBuffer.ByValue,
+    fun jormungandr_wallet_451a_symmetric_cipher_decrypt(password: RustBuffer.ByValue,ciphertext: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun ffi_jormungandr_wallet_a148_rustbuffer_alloc(size: Int,
+    fun ffi_jormungandr_wallet_451a_rustbuffer_alloc(size: Int,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun ffi_jormungandr_wallet_a148_rustbuffer_from_bytes(bytes: ForeignBytes.ByValue,
+    fun ffi_jormungandr_wallet_451a_rustbuffer_from_bytes(bytes: ForeignBytes.ByValue,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun ffi_jormungandr_wallet_a148_rustbuffer_free(buf: RustBuffer.ByValue,
+    fun ffi_jormungandr_wallet_451a_rustbuffer_free(buf: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun ffi_jormungandr_wallet_a148_rustbuffer_reserve(buf: RustBuffer.ByValue,additional: Int,
+    fun ffi_jormungandr_wallet_451a_rustbuffer_reserve(buf: RustBuffer.ByValue,additional: Int,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
@@ -657,45 +681,60 @@ sealed class PayloadTypeConfig  {
 
 
 
+@Throws(WalletException::class)
 
 fun blockDateFromSystemTime(settings: Settings, unixEpoch: ULong ): BlockDate {
     val _retval = 
     rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_a148_block_date_from_system_time(settings.lower(), unixEpoch.lower() ,status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_451a_block_date_from_system_time(settings.lower(), unixEpoch.lower() ,status)
 }
     return BlockDate.lift(_retval)
 }
 
 
+@Throws(WalletException::class)
 
 fun maxExpirationDate(settings: Settings, currentTime: ULong ): BlockDate {
     val _retval = 
     rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_a148_max_expiration_date(settings.lower(), currentTime.lower() ,status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_451a_max_expiration_date(settings.lower(), currentTime.lower() ,status)
 }
     return BlockDate.lift(_retval)
 }
 
 
+@Throws(WalletException::class)
 
 fun symmetricCipherDecrypt(password: List<UByte>, ciphertext: List<UByte> ): List<UByte> {
     val _retval = 
     rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_a148_symmetric_cipher_decrypt(lowerSequenceUByte(password), lowerSequenceUByte(ciphertext) ,status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_451a_symmetric_cipher_decrypt(lowerSequenceUByte(password), lowerSequenceUByte(ciphertext) ,status)
 }
     return liftSequenceUByte(_retval)
 }
 
 
 public interface WalletInterface {
+    
     fun convert(settings: Settings, validUntil: BlockDate ): Conversion
+    
+    @Throws(WalletException::class)
     fun setState(value: ULong, counter: List<UInt> )
+    
+    @Throws(WalletException::class)
     fun vote(settings: Settings, proposal: Proposal, choice: UByte, validUntil: BlockDate, lane: UByte ): List<UByte>
+    
     fun confirmTransaction(fragmentId: List<UByte> )
+    
     fun pendingTransactions(): List<List<UByte>>
+    
     fun accountId(): List<UByte>
+    
     fun spendingCounters(): List<UInt>
+    
     fun totalValue(): ULong
+    
+    @Throws(WalletException::class)
     fun retrieveFunds(block0: List<UByte> ): Settings
     
 }
@@ -706,7 +745,7 @@ class Wallet(
     constructor(accountKey: SecretKeyEd25519Extended, utxoKeys: List<SecretKeyEd25519Extended> ) :
         this(
     rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_a148_Wallet_new(accountKey.lower(), lowerSequenceObjectSecretKeyEd25519Extended(utxoKeys) ,status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Wallet_new(accountKey.lower(), lowerSequenceObjectSecretKeyEd25519Extended(utxoKeys) ,status)
 })
 
     /**
@@ -719,7 +758,7 @@ class Wallet(
      */
     override protected fun freeRustArcPtr() {
         rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_a148_Wallet_object_free(this.pointer, status)
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_451a_Wallet_object_free(this.pointer, status)
         }
     }
 
@@ -734,23 +773,25 @@ class Wallet(
     override fun convert(settings: Settings, validUntil: BlockDate ): Conversion =
         callWithPointer {
     rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_a148_Wallet_convert(it, settings.lower(), validUntil.lower() , status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Wallet_convert(it, settings.lower(), validUntil.lower() , status)
 }
         }.let {
             Conversion.lift(it)
         }
     
-    override fun setState(value: ULong, counter: List<UInt> ) =
+    
+    @Throws(WalletException::class)override fun setState(value: ULong, counter: List<UInt> ) =
         callWithPointer {
     rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_a148_Wallet_set_state(it, value.lower(), lowerSequenceUInt(counter) , status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Wallet_set_state(it, value.lower(), lowerSequenceUInt(counter) , status)
 }
         }
     
-    override fun vote(settings: Settings, proposal: Proposal, choice: UByte, validUntil: BlockDate, lane: UByte ): List<UByte> =
+    
+    @Throws(WalletException::class)override fun vote(settings: Settings, proposal: Proposal, choice: UByte, validUntil: BlockDate, lane: UByte ): List<UByte> =
         callWithPointer {
     rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_a148_Wallet_vote(it, settings.lower(), proposal.lower(), choice.lower(), validUntil.lower(), lane.lower() , status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Wallet_vote(it, settings.lower(), proposal.lower(), choice.lower(), validUntil.lower(), lane.lower() , status)
 }
         }.let {
             liftSequenceUByte(it)
@@ -759,14 +800,14 @@ class Wallet(
     override fun confirmTransaction(fragmentId: List<UByte> ) =
         callWithPointer {
     rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_a148_Wallet_confirm_transaction(it, lowerSequenceUByte(fragmentId) , status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Wallet_confirm_transaction(it, lowerSequenceUByte(fragmentId) , status)
 }
         }
     
     override fun pendingTransactions(): List<List<UByte>> =
         callWithPointer {
     rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_a148_Wallet_pending_transactions(it,  status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Wallet_pending_transactions(it,  status)
 }
         }.let {
             liftSequenceSequenceUByte(it)
@@ -775,7 +816,7 @@ class Wallet(
     override fun accountId(): List<UByte> =
         callWithPointer {
     rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_a148_Wallet_account_id(it,  status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Wallet_account_id(it,  status)
 }
         }.let {
             liftSequenceUByte(it)
@@ -784,7 +825,7 @@ class Wallet(
     override fun spendingCounters(): List<UInt> =
         callWithPointer {
     rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_a148_Wallet_spending_counters(it,  status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Wallet_spending_counters(it,  status)
 }
         }.let {
             liftSequenceUInt(it)
@@ -793,16 +834,17 @@ class Wallet(
     override fun totalValue(): ULong =
         callWithPointer {
     rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_a148_Wallet_total_value(it,  status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Wallet_total_value(it,  status)
 }
         }.let {
             ULong.lift(it)
         }
     
-    override fun retrieveFunds(block0: List<UByte> ): Settings =
+    
+    @Throws(WalletException::class)override fun retrieveFunds(block0: List<UByte> ): Settings =
         callWithPointer {
     rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_a148_Wallet_retrieve_funds(it, lowerSequenceUByte(block0) , status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Wallet_retrieve_funds(it, lowerSequenceUByte(block0) , status)
 }
         }.let {
             Settings.lift(it)
@@ -824,7 +866,7 @@ class Wallet(
         fun fromMnemonics(mnemonics: String, password: List<UByte> ): Wallet =
             Wallet(
     rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_a148_Wallet_from_mnemonics(mnemonics.lower(), lowerSequenceUByte(password) ,status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Wallet_from_mnemonics(mnemonics.lower(), lowerSequenceUByte(password) ,status)
 })
         
     }
@@ -840,7 +882,7 @@ class SecretKeyEd25519Extended(
     constructor(raw: List<UByte> ) :
         this(
     rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_a148_SecretKeyEd25519Extended_new(lowerSequenceUByte(raw) ,status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_451a_SecretKeyEd25519Extended_new(lowerSequenceUByte(raw) ,status)
 })
 
     /**
@@ -853,7 +895,7 @@ class SecretKeyEd25519Extended(
      */
     override protected fun freeRustArcPtr() {
         rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_a148_SecretKeyEd25519Extended_object_free(this.pointer, status)
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_451a_SecretKeyEd25519Extended_object_free(this.pointer, status)
         }
     }
 
@@ -883,7 +925,9 @@ class SecretKeyEd25519Extended(
 }
 
 public interface FragmentInterface {
+    
     fun id(): List<UByte>
+    
     fun serialize(): List<UByte>
     
 }
@@ -894,7 +938,7 @@ class Fragment(
     constructor(raw: List<UByte> ) :
         this(
     rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_a148_Fragment_new(lowerSequenceUByte(raw) ,status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Fragment_new(lowerSequenceUByte(raw) ,status)
 })
 
     /**
@@ -907,7 +951,7 @@ class Fragment(
      */
     override protected fun freeRustArcPtr() {
         rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_a148_Fragment_object_free(this.pointer, status)
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_451a_Fragment_object_free(this.pointer, status)
         }
     }
 
@@ -922,7 +966,7 @@ class Fragment(
     override fun id(): List<UByte> =
         callWithPointer {
     rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_a148_Fragment_id(it,  status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Fragment_id(it,  status)
 }
         }.let {
             liftSequenceUByte(it)
@@ -931,7 +975,7 @@ class Fragment(
     override fun serialize(): List<UByte> =
         callWithPointer {
     rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_a148_Fragment_serialize(it,  status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Fragment_serialize(it,  status)
 }
         }.let {
             liftSequenceUByte(it)
@@ -955,6 +999,7 @@ class Fragment(
 }
 
 public interface SettingsInterface {
+    
     fun settingsRaw(): SettingsRaw
     
 }
@@ -965,7 +1010,7 @@ class Settings(
     constructor(settings: SettingsRaw ) :
         this(
     rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_a148_Settings_new(settings.lower() ,status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Settings_new(settings.lower() ,status)
 })
 
     /**
@@ -978,7 +1023,7 @@ class Settings(
      */
     override protected fun freeRustArcPtr() {
         rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_a148_Settings_object_free(this.pointer, status)
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_451a_Settings_object_free(this.pointer, status)
         }
     }
 
@@ -993,7 +1038,7 @@ class Settings(
     override fun settingsRaw(): SettingsRaw =
         callWithPointer {
     rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_a148_Settings_settings_raw(it,  status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Settings_settings_raw(it,  status)
 }
         }.let {
             SettingsRaw.lift(it)
@@ -1333,7 +1378,6 @@ data class Conversion (
 }
 
 
-// Error WalletError
 
 sealed class WalletException(message: String): Exception(message)  {
         // Each variant is a nested class
@@ -1464,7 +1508,7 @@ internal fun String.write(buf: RustBufferBuilder) {
 // Helper code for TimeEra record is found in RecordTemplate.kt
 // Helper code for Discrimination enum is found in EnumTemplate.kt
 // Helper code for PayloadTypeConfig enum is found in EnumTemplate.kt
-// Helper code for WalletError error is found in ErrorTemplate.kt
+// Helper code for WalletException error is found in ErrorTemplate.kt
 
 
 // Helper functions for passing values of type List<UByte>
