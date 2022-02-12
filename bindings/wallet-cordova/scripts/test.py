@@ -171,6 +171,7 @@ if __name__ == "__main__":
                 "build",
                 "ios",
                 "--debug",
+                "--buildFlag=SWIFT_VERSION=5",
             ],
             cwd=app_dir,
         )
