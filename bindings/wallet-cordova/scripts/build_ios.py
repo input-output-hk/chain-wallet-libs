@@ -28,6 +28,7 @@ targets = {
 
 def run(release=True):
     plugin_ios_dir = plugin_directory / "src/ios"
+
     xcframework_path = (
         plugin_directory / "src/ios/libuniffi_jormungandr_wallet.xcframework"
     )
@@ -37,41 +38,42 @@ def run(release=True):
         "-output",
         xcframework_path,
     ]
+
     native_libs = []
 
     for platform, rust_targets in targets.items():
-        rust_targets = ",".join(rust_targets)
-        rust_lipo_command = [
-            "cargo",
-            "lipo",
-            "-p",
-            "wallet-uniffi",
-            "--features",
-            "builtin-bindgen",
-            "--targets",
-            rust_targets,
-        ]
-
-        if release:
-            rust_lipo_command.append("--release")
-
-        subprocess.run(
-            rust_lipo_command,
-            check=True,
-        )
-
-        debug_or_release = "release" if release else "debug"
-        library_src_path = (
-            rust_build_directory / "universal" / debug_or_release / libname
-        )
-
         libname_platform = f"{platform}-{libname}"
         library_path = plugin_ios_dir / libname_platform
 
-        shutil.copy(library_src_path, library_path)
-
         native_libs.append(library_path)
         xcframework_command += ["-library", library_path]
+
+        lipo_command = ["lipo", "-create", "-output", library_path]
+
+        for rust_target in rust_targets:
+            rustc_command = [
+                "cargo",
+                "rustc",
+                "-p",
+                "wallet-uniffi",
+                "--features",
+                "builtin-bindgen",
+                "--target",
+                rust_target,
+            ]
+
+            if release:
+                rustc_command += ["--release", "--", "-C", "lto"]
+
+            subprocess.run(rustc_command, check=True)
+
+            debug_or_release = "release" if release else "debug"
+            library_src_path = (
+                rust_build_directory / rust_target / debug_or_release / libname
+            )
+            lipo_command.append(library_src_path)
+
+        subprocess.run(lipo_command, check=True)
 
     subprocess.run(xcframework_command, check=True)
 

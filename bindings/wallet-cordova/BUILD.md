@@ -23,7 +23,6 @@ Where $NDK is your * Android NDK * installation directory, and $BUILDING_PLATFOR
 Prerequisites:
 
 - XCode
-- `cargo install cargo-lipo`
 - For testing:
   - `rustup target add x86_64-apple-ios`
   - `rustup target add aarch64-apple-ios-sim`
