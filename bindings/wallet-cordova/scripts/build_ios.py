@@ -3,6 +3,7 @@
 from pathlib import Path
 import subprocess
 import shutil
+import os
 from directories import (
     repository_directory,
     rust_build_directory,
@@ -25,7 +26,7 @@ targets = {
 }
 
 
-def run():
+def run(release=True):
     plugin_ios_dir = plugin_directory / "src/ios"
     xcframework_path = (
         plugin_directory / "src/ios/libuniffi_jormungandr_wallet.xcframework"
@@ -36,27 +37,42 @@ def run():
         "-output",
         xcframework_path,
     ]
+    native_libs = []
+
     for platform, rust_targets in targets.items():
         rust_targets = ",".join(rust_targets)
+        rust_lipo_command = [
+            "cargo",
+            "lipo",
+            "-p",
+            "wallet-uniffi",
+            "--features",
+            "builtin-bindgen",
+            "--targets",
+            rust_targets,
+        ]
+
+        if release:
+            rust_lipo_command.append("--release")
+
         subprocess.run(
-            [
-                "cargo",
-                "lipo",
-                "-p",
-                "wallet-uniffi",
-                "--features",
-                "builtin-bindgen",
-                "--release",
-                "--targets",
-                rust_targets,
-            ],
+            rust_lipo_command,
             check=True,
         )
+
+        debug_or_release = "release" if release else "debug"
+        library_src_path = (
+            rust_build_directory / "universal" / debug_or_release / libname
+        )
+
         libname_platform = f"{platform}-{libname}"
-        library_src_path = rust_build_directory / "universal/release" / libname
         library_path = plugin_ios_dir / libname_platform
+
         shutil.copy(library_src_path, library_path)
+
+        native_libs.append(library_path)
         xcframework_command += ["-library", library_path]
+
     subprocess.run(xcframework_command, check=True)
 
     # The current version of Cordova cannot deal with Swift packages, so instead we install the
@@ -69,6 +85,10 @@ def run():
         wallet_swift_dir / "JormungandrWalletFFI/JormungandrWalletFFI.h",
         plugin_ios_dir,
     )
+
+    # remove intermediary build artifacts
+    for lib in native_libs:
+        os.remove(lib)
 
 
 if __name__ == "__main__":
