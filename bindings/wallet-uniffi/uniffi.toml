@@ -1,2 +1,5 @@
 [bindings.kotlin]
 package_name = "com.iohk.jormungandr_wallet"
+
+[bindings.swift]
+module_name = "JormungandrWallet"

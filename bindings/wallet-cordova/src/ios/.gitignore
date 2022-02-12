@@ -1,0 +1,4 @@
+*.a
+*.xcframework
+JormungandrWallet.swift
+JormungandrWalletFFI.h
