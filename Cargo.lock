@@ -99,7 +99,7 @@ checksum = "cf9ff0bbfd639f15c74af777d81383cf53efb7c93613f6cab67c6c11e05bbf8b"
 name = "bip39"
 version = "0.1.0"
 dependencies = [
- "cryptoxide 0.4.2 (git+https://github.com/typed-io/cryptoxide.git?branch=master)",
+ "cryptoxide",
  "hex",
  "quickcheck",
  "quickcheck_macros",
@@ -179,7 +179,7 @@ source = "git+https://github.com/input-output-hk/chain-libs.git?branch=master#16
 dependencies = [
  "cbor_event",
  "chain-ser",
- "cryptoxide 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cryptoxide",
  "ed25519-bip32",
 ]
 
@@ -238,7 +238,7 @@ dependencies = [
  "bech32 0.8.1",
  "chain-core",
  "chain-crypto",
- "cryptoxide 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cryptoxide",
 ]
 
 [[package]]
@@ -255,7 +255,7 @@ version = "0.1.0"
 source = "git+https://github.com/input-output-hk/chain-libs.git?branch=master#1626503c539d31925fcd99c2683edc4f73ee15a6"
 dependencies = [
  "bech32 0.8.1",
- "cryptoxide 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cryptoxide",
  "curve25519-dalek-ng",
  "ed25519-bip32",
  "ed25519-dalek",
@@ -279,7 +279,7 @@ dependencies = [
  "chain-ser",
  "chain-time",
  "chain-vote",
- "cryptoxide 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cryptoxide",
  "hex",
  "imhamt",
  "rand 0.8.4",
@@ -324,7 +324,7 @@ dependencies = [
  "chain-core",
  "chain-crypto",
  "const_format",
- "cryptoxide 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cryptoxide",
  "rand 0.8.4",
  "rand_core 0.6.3",
  "rayon",
@@ -446,13 +446,7 @@ dependencies = [
 [[package]]
 name = "cryptoxide"
 version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "129eabb7b0b78644a3a7e7cf220714aba47463bb281f69fa7a71ca5d12564cca"
-
-[[package]]
-name = "cryptoxide"
-version = "0.4.2"
-source = "git+https://github.com/typed-io/cryptoxide.git?branch=master#c953d1bfb22294d43098b8926e0ea215025d2061"
+source = "git+https://github.com/typed-io/cryptoxide.git#c953d1bfb22294d43098b8926e0ea215025d2061"
 
 [[package]]
 name = "curve25519-dalek"
@@ -515,7 +509,7 @@ version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb588f93c0d91b2f668849fd6d030cddb0b2e31f105963be189da5acdf492a21"
 dependencies = [
- "cryptoxide 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cryptoxide",
 ]
 
 [[package]]
@@ -622,7 +616,7 @@ dependencies = [
  "chain-addr",
  "chain-crypto",
  "chain-path-derivation",
- "cryptoxide 0.4.2 (git+https://github.com/typed-io/cryptoxide.git?branch=master)",
+ "cryptoxide",
  "ed25519-bip32",
  "hex",
  "quickcheck",
@@ -1165,7 +1159,7 @@ checksum = "8049cf85f0e715d6af38dde439cb0ccb91f67fb9f5f63c80f8b43e48356e1a3f"
 name = "symmetric-cipher"
 version = "0.5.0"
 dependencies = [
- "cryptoxide 0.4.2 (git+https://github.com/typed-io/cryptoxide.git?branch=master)",
+ "cryptoxide",
  "rand 0.8.4",
  "rand_chacha 0.3.1",
  "thiserror",
@@ -1372,7 +1366,7 @@ dependencies = [
  "chain-path-derivation",
  "chain-ser",
  "chain-time",
- "cryptoxide 0.4.2 (git+https://github.com/typed-io/cryptoxide.git?branch=master)",
+ "cryptoxide",
  "ed25519-bip32",
  "hashlink",
  "hdkeygen",
