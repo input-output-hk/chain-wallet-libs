@@ -22,9 +22,11 @@ Where $NDK is your * Android NDK * installation directory, and $BUILDING_PLATFOR
 
 Prerequisites:
 
-* XCode
-* `rustup target add x86_64-apple-ios` - for testing.
-* `rustup target add aarch64-apple-ios` - for devices.
+- XCode
+- For testing:
+  - `rustup target add x86_64-apple-ios`
+  - `rustup target add aarch64-apple-ios-sim`
+- For devices: `rustup target add aarch64-apple-ios`
 
 Run `./build_ios.py`. This will build the library and copy headers and the
 library file to the Cordova plugin directory.

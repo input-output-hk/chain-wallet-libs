@@ -57,10 +57,10 @@
             </feature>
         </config-file>
 
-        <header-file src="src/ios/LibWallet.h" />
-        <header-file src="src/ios/WalletPlugin.h" />
-        <source-file src="src/ios/WalletPlugin.m" />
-        <source-file src="src/ios/libjormungandrwallet.a" framework="true" />
+        <source-file src="src/ios/WalletPlugin.swift" />
+        <source-file src="src/ios/JormungandrWallet.swift" />
+        <header-file src="src/ios/JormungandrWalletFFI.h" type="BridgingHeader" />
+        <framework src="src/ios/libuniffi_jormungandr_wallet.xcframework" custom="true" />
     </platform>
 
     <platform name="browser">

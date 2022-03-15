@@ -324,6 +324,7 @@ jobs:
 
       - run: rustup target add x86_64-apple-ios
       - run: rustup target add aarch64-apple-ios
+      - run: rustup target add aarch64-apple-ios-sim
 
       - name: Checkout code
         uses: actions/checkout@v1
