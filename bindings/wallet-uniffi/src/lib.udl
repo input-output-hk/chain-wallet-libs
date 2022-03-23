@@ -28,6 +28,7 @@ interface Wallet {
         sequence<SecretKeyEd25519Extended> utxo_keys
     );
 
+    [Throws=WalletError]
     void set_state(u64 value, sequence<u32> counter);
     [Throws=WalletError]
     sequence<u8> vote(Settings settings, Proposal proposal, u8 choice, BlockDate valid_until, u8 lane);

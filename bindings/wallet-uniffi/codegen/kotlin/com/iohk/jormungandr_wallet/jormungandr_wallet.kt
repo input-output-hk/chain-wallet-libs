@@ -43,7 +43,7 @@ open class RustBuffer : Structure() {
 
     companion object {
         internal fun alloc(size: Int = 0) = rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_451a_rustbuffer_alloc(size, status).also {
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_7343_rustbuffer_alloc(size, status).also {
                 if(it.data == null) {
                    throw RuntimeException("RustBuffer.alloc() returned null data pointer (size=${size})")
                }
@@ -51,11 +51,11 @@ open class RustBuffer : Structure() {
         }
 
         internal fun free(buf: RustBuffer.ByValue) = rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_451a_rustbuffer_free(buf, status)
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_7343_rustbuffer_free(buf, status)
         }
 
         internal fun reserve(buf: RustBuffer.ByValue, additional: Int) = rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_451a_rustbuffer_reserve(buf, additional, status)
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_7343_rustbuffer_reserve(buf, additional, status)
         }
     }
 
@@ -322,115 +322,95 @@ internal interface _UniFFILib : Library {
         }
     }
 
-    fun ffi_jormungandr_wallet_451a_Wallet_object_free(ptr: Pointer,
+    fun ffi_jormungandr_wallet_7343_Wallet_object_free(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun jormungandr_wallet_451a_Wallet_new(account_key: Pointer,utxo_keys: RustBuffer.ByValue,
+    fun jormungandr_wallet_7343_Wallet_new(account_key: Pointer,utxo_keys: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Pointer
 
-    fun jormungandr_wallet_451a_Wallet_from_mnemonics(mnemonics: RustBuffer.ByValue,password: RustBuffer.ByValue,
-    uniffi_out_err: RustCallStatus
-    ): Pointer
-
-    fun jormungandr_wallet_451a_Wallet_convert(ptr: Pointer,settings: Pointer,valid_until: RustBuffer.ByValue,
-    uniffi_out_err: RustCallStatus
-    ): RustBuffer.ByValue
-
-    fun jormungandr_wallet_451a_Wallet_set_state(ptr: Pointer,value: Long,counter: RustBuffer.ByValue,
+    fun jormungandr_wallet_7343_Wallet_set_state(ptr: Pointer,value: Long,counter: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun jormungandr_wallet_451a_Wallet_vote(ptr: Pointer,settings: Pointer,proposal: RustBuffer.ByValue,choice: Byte,valid_until: RustBuffer.ByValue,lane: Byte,
+    fun jormungandr_wallet_7343_Wallet_vote(ptr: Pointer,settings: Pointer,proposal: RustBuffer.ByValue,choice: Byte,valid_until: RustBuffer.ByValue,lane: Byte,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun jormungandr_wallet_451a_Wallet_confirm_transaction(ptr: Pointer,fragment_id: RustBuffer.ByValue,
-    uniffi_out_err: RustCallStatus
-    ): Unit
-
-    fun jormungandr_wallet_451a_Wallet_pending_transactions(ptr: Pointer,
+    fun jormungandr_wallet_7343_Wallet_account_id(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun jormungandr_wallet_451a_Wallet_account_id(ptr: Pointer,
+    fun jormungandr_wallet_7343_Wallet_spending_counters(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun jormungandr_wallet_451a_Wallet_spending_counters(ptr: Pointer,
-    uniffi_out_err: RustCallStatus
-    ): RustBuffer.ByValue
-
-    fun jormungandr_wallet_451a_Wallet_total_value(ptr: Pointer,
+    fun jormungandr_wallet_7343_Wallet_total_value(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): Long
 
-    fun jormungandr_wallet_451a_Wallet_retrieve_funds(ptr: Pointer,block0: RustBuffer.ByValue,
-    uniffi_out_err: RustCallStatus
-    ): Pointer
-
-    fun ffi_jormungandr_wallet_451a_SecretKeyEd25519Extended_object_free(ptr: Pointer,
+    fun ffi_jormungandr_wallet_7343_SecretKeyEd25519Extended_object_free(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun jormungandr_wallet_451a_SecretKeyEd25519Extended_new(raw: RustBuffer.ByValue,
+    fun jormungandr_wallet_7343_SecretKeyEd25519Extended_new(raw: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Pointer
 
-    fun ffi_jormungandr_wallet_451a_Fragment_object_free(ptr: Pointer,
+    fun ffi_jormungandr_wallet_7343_Fragment_object_free(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun jormungandr_wallet_451a_Fragment_new(raw: RustBuffer.ByValue,
+    fun jormungandr_wallet_7343_Fragment_new(raw: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Pointer
 
-    fun jormungandr_wallet_451a_Fragment_id(ptr: Pointer,
+    fun jormungandr_wallet_7343_Fragment_id(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun jormungandr_wallet_451a_Fragment_serialize(ptr: Pointer,
+    fun jormungandr_wallet_7343_Fragment_serialize(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun ffi_jormungandr_wallet_451a_Settings_object_free(ptr: Pointer,
+    fun ffi_jormungandr_wallet_7343_Settings_object_free(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun jormungandr_wallet_451a_Settings_new(settings: RustBuffer.ByValue,
+    fun jormungandr_wallet_7343_Settings_new(settings: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Pointer
 
-    fun jormungandr_wallet_451a_Settings_settings_raw(ptr: Pointer,
+    fun jormungandr_wallet_7343_Settings_settings_raw(ptr: Pointer,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun jormungandr_wallet_451a_block_date_from_system_time(settings: Pointer,unix_epoch: Long,
+    fun jormungandr_wallet_7343_block_date_from_system_time(settings: Pointer,unix_epoch: Long,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun jormungandr_wallet_451a_max_expiration_date(settings: Pointer,current_time: Long,
+    fun jormungandr_wallet_7343_max_expiration_date(settings: Pointer,current_time: Long,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun jormungandr_wallet_451a_symmetric_cipher_decrypt(password: RustBuffer.ByValue,ciphertext: RustBuffer.ByValue,
+    fun jormungandr_wallet_7343_symmetric_cipher_decrypt(password: RustBuffer.ByValue,ciphertext: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun ffi_jormungandr_wallet_451a_rustbuffer_alloc(size: Int,
+    fun ffi_jormungandr_wallet_7343_rustbuffer_alloc(size: Int,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun ffi_jormungandr_wallet_451a_rustbuffer_from_bytes(bytes: ForeignBytes.ByValue,
+    fun ffi_jormungandr_wallet_7343_rustbuffer_from_bytes(bytes: ForeignBytes.ByValue,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
-    fun ffi_jormungandr_wallet_451a_rustbuffer_free(buf: RustBuffer.ByValue,
+    fun ffi_jormungandr_wallet_7343_rustbuffer_free(buf: RustBuffer.ByValue,
     uniffi_out_err: RustCallStatus
     ): Unit
 
-    fun ffi_jormungandr_wallet_451a_rustbuffer_reserve(buf: RustBuffer.ByValue,additional: Int,
+    fun ffi_jormungandr_wallet_7343_rustbuffer_reserve(buf: RustBuffer.ByValue,additional: Int,
     uniffi_out_err: RustCallStatus
     ): RustBuffer.ByValue
 
@@ -686,7 +666,7 @@ sealed class PayloadTypeConfig  {
 fun blockDateFromSystemTime(settings: Settings, unixEpoch: ULong ): BlockDate {
     val _retval = 
     rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_451a_block_date_from_system_time(settings.lower(), unixEpoch.lower() ,status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_7343_block_date_from_system_time(settings.lower(), unixEpoch.lower() ,status)
 }
     return BlockDate.lift(_retval)
 }
@@ -697,7 +677,7 @@ fun blockDateFromSystemTime(settings: Settings, unixEpoch: ULong ): BlockDate {
 fun maxExpirationDate(settings: Settings, currentTime: ULong ): BlockDate {
     val _retval = 
     rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_451a_max_expiration_date(settings.lower(), currentTime.lower() ,status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_7343_max_expiration_date(settings.lower(), currentTime.lower() ,status)
 }
     return BlockDate.lift(_retval)
 }
@@ -708,7 +688,7 @@ fun maxExpirationDate(settings: Settings, currentTime: ULong ): BlockDate {
 fun symmetricCipherDecrypt(password: List<UByte>, ciphertext: List<UByte> ): List<UByte> {
     val _retval = 
     rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_451a_symmetric_cipher_decrypt(lowerSequenceUByte(password), lowerSequenceUByte(ciphertext) ,status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_7343_symmetric_cipher_decrypt(lowerSequenceUByte(password), lowerSequenceUByte(ciphertext) ,status)
 }
     return liftSequenceUByte(_retval)
 }
@@ -716,26 +696,17 @@ fun symmetricCipherDecrypt(password: List<UByte>, ciphertext: List<UByte> ): Lis
 
 public interface WalletInterface {
     
-    fun convert(settings: Settings, validUntil: BlockDate ): Conversion
-    
     @Throws(WalletException::class)
     fun setState(value: ULong, counter: List<UInt> )
     
     @Throws(WalletException::class)
     fun vote(settings: Settings, proposal: Proposal, choice: UByte, validUntil: BlockDate, lane: UByte ): List<UByte>
     
-    fun confirmTransaction(fragmentId: List<UByte> )
-    
-    fun pendingTransactions(): List<List<UByte>>
-    
     fun accountId(): List<UByte>
     
     fun spendingCounters(): List<UInt>
     
     fun totalValue(): ULong
-    
-    @Throws(WalletException::class)
-    fun retrieveFunds(block0: List<UByte> ): Settings
     
 }
 
@@ -745,7 +716,7 @@ class Wallet(
     constructor(accountKey: SecretKeyEd25519Extended, utxoKeys: List<SecretKeyEd25519Extended> ) :
         this(
     rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Wallet_new(accountKey.lower(), lowerSequenceObjectSecretKeyEd25519Extended(utxoKeys) ,status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_7343_Wallet_new(accountKey.lower(), lowerSequenceObjectSecretKeyEd25519Extended(utxoKeys) ,status)
 })
 
     /**
@@ -758,7 +729,7 @@ class Wallet(
      */
     override protected fun freeRustArcPtr() {
         rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_451a_Wallet_object_free(this.pointer, status)
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_7343_Wallet_object_free(this.pointer, status)
         }
     }
 
@@ -770,20 +741,11 @@ class Wallet(
         buf.putLong(Pointer.nativeValue(this.lower()))
     }
 
-    override fun convert(settings: Settings, validUntil: BlockDate ): Conversion =
-        callWithPointer {
-    rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Wallet_convert(it, settings.lower(), validUntil.lower() , status)
-}
-        }.let {
-            Conversion.lift(it)
-        }
-    
     
     @Throws(WalletException::class)override fun setState(value: ULong, counter: List<UInt> ) =
         callWithPointer {
     rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Wallet_set_state(it, value.lower(), lowerSequenceUInt(counter) , status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_7343_Wallet_set_state(it, value.lower(), lowerSequenceUInt(counter) , status)
 }
         }
     
@@ -791,32 +753,16 @@ class Wallet(
     @Throws(WalletException::class)override fun vote(settings: Settings, proposal: Proposal, choice: UByte, validUntil: BlockDate, lane: UByte ): List<UByte> =
         callWithPointer {
     rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Wallet_vote(it, settings.lower(), proposal.lower(), choice.lower(), validUntil.lower(), lane.lower() , status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_7343_Wallet_vote(it, settings.lower(), proposal.lower(), choice.lower(), validUntil.lower(), lane.lower() , status)
 }
         }.let {
             liftSequenceUByte(it)
         }
     
-    override fun confirmTransaction(fragmentId: List<UByte> ) =
-        callWithPointer {
-    rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Wallet_confirm_transaction(it, lowerSequenceUByte(fragmentId) , status)
-}
-        }
-    
-    override fun pendingTransactions(): List<List<UByte>> =
-        callWithPointer {
-    rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Wallet_pending_transactions(it,  status)
-}
-        }.let {
-            liftSequenceSequenceUByte(it)
-        }
-    
     override fun accountId(): List<UByte> =
         callWithPointer {
     rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Wallet_account_id(it,  status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_7343_Wallet_account_id(it,  status)
 }
         }.let {
             liftSequenceUByte(it)
@@ -825,7 +771,7 @@ class Wallet(
     override fun spendingCounters(): List<UInt> =
         callWithPointer {
     rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Wallet_spending_counters(it,  status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_7343_Wallet_spending_counters(it,  status)
 }
         }.let {
             liftSequenceUInt(it)
@@ -834,20 +780,10 @@ class Wallet(
     override fun totalValue(): ULong =
         callWithPointer {
     rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Wallet_total_value(it,  status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_7343_Wallet_total_value(it,  status)
 }
         }.let {
             ULong.lift(it)
-        }
-    
-    
-    @Throws(WalletException::class)override fun retrieveFunds(block0: List<UByte> ): Settings =
-        callWithPointer {
-    rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Wallet_retrieve_funds(it, lowerSequenceUByte(block0) , status)
-}
-        }.let {
-            Settings.lift(it)
         }
     
     
@@ -863,11 +799,6 @@ class Wallet(
             return Wallet.lift(Pointer(buf.getLong()))
         }
 
-        fun fromMnemonics(mnemonics: String, password: List<UByte> ): Wallet =
-            Wallet(
-    rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Wallet_from_mnemonics(mnemonics.lower(), lowerSequenceUByte(password) ,status)
-})
         
     }
 }
@@ -882,7 +813,7 @@ class SecretKeyEd25519Extended(
     constructor(raw: List<UByte> ) :
         this(
     rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_451a_SecretKeyEd25519Extended_new(lowerSequenceUByte(raw) ,status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_7343_SecretKeyEd25519Extended_new(lowerSequenceUByte(raw) ,status)
 })
 
     /**
@@ -895,7 +826,7 @@ class SecretKeyEd25519Extended(
      */
     override protected fun freeRustArcPtr() {
         rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_451a_SecretKeyEd25519Extended_object_free(this.pointer, status)
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_7343_SecretKeyEd25519Extended_object_free(this.pointer, status)
         }
     }
 
@@ -938,7 +869,7 @@ class Fragment(
     constructor(raw: List<UByte> ) :
         this(
     rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Fragment_new(lowerSequenceUByte(raw) ,status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_7343_Fragment_new(lowerSequenceUByte(raw) ,status)
 })
 
     /**
@@ -951,7 +882,7 @@ class Fragment(
      */
     override protected fun freeRustArcPtr() {
         rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_451a_Fragment_object_free(this.pointer, status)
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_7343_Fragment_object_free(this.pointer, status)
         }
     }
 
@@ -966,7 +897,7 @@ class Fragment(
     override fun id(): List<UByte> =
         callWithPointer {
     rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Fragment_id(it,  status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_7343_Fragment_id(it,  status)
 }
         }.let {
             liftSequenceUByte(it)
@@ -975,7 +906,7 @@ class Fragment(
     override fun serialize(): List<UByte> =
         callWithPointer {
     rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Fragment_serialize(it,  status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_7343_Fragment_serialize(it,  status)
 }
         }.let {
             liftSequenceUByte(it)
@@ -1010,7 +941,7 @@ class Settings(
     constructor(settings: SettingsRaw ) :
         this(
     rustCallWithError(WalletException) { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Settings_new(settings.lower() ,status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_7343_Settings_new(settings.lower() ,status)
 })
 
     /**
@@ -1023,7 +954,7 @@ class Settings(
      */
     override protected fun freeRustArcPtr() {
         rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_451a_Settings_object_free(this.pointer, status)
+            _UniFFILib.INSTANCE.ffi_jormungandr_wallet_7343_Settings_object_free(this.pointer, status)
         }
     }
 
@@ -1038,7 +969,7 @@ class Settings(
     override fun settingsRaw(): SettingsRaw =
         callWithPointer {
     rustCall() { status ->
-    _UniFFILib.INSTANCE.jormungandr_wallet_451a_Settings_settings_raw(it,  status)
+    _UniFFILib.INSTANCE.jormungandr_wallet_7343_Settings_settings_raw(it,  status)
 }
         }.let {
             SettingsRaw.lift(it)
@@ -1333,50 +1264,6 @@ data class BlockDate (
     
 }
 
-data class Conversion (
-    var ignoredValue: ULong, 
-    var ignoredCount: UInt, 
-    var fragments: List<Fragment> 
-) : Disposable {
-    companion object {
-        internal fun lift(rbuf: RustBuffer.ByValue): Conversion {
-            return liftFromRustBuffer(rbuf) { buf -> Conversion.read(buf) }
-        }
-
-        internal fun read(buf: ByteBuffer): Conversion {
-            return Conversion(
-            ULong.read(buf),
-            UInt.read(buf),
-            readSequenceObjectFragment(buf)
-            )
-        }
-    }
-
-    internal fun lower(): RustBuffer.ByValue {
-        return lowerIntoRustBuffer(this, {v, buf -> v.write(buf)})
-    }
-
-    internal fun write(buf: RustBufferBuilder) {
-            this.ignoredValue.write(buf)
-        
-            this.ignoredCount.write(buf)
-        
-            writeSequenceObjectFragment(this.fragments, buf)
-        
-    }
-
-    
-    @Suppress("UNNECESSARY_SAFE_CALL") // codegen is much simpler if we unconditionally emit safe calls here
-    override fun destroy() {
-        
-    Disposable.destroy(
-        this.ignoredValue, 
-        this.ignoredCount, 
-        this.fragments )
-    }
-    
-}
-
 
 
 sealed class WalletException(message: String): Exception(message)  {
@@ -1499,7 +1386,6 @@ internal fun String.write(buf: RustBufferBuilder) {
 // Helper code for Settings class is found in ObjectTemplate.kt
 // Helper code for Wallet class is found in ObjectTemplate.kt
 // Helper code for BlockDate record is found in RecordTemplate.kt
-// Helper code for Conversion record is found in RecordTemplate.kt
 // Helper code for LinearFee record is found in RecordTemplate.kt
 // Helper code for PerCertificateFee record is found in RecordTemplate.kt
 // Helper code for PerVoteCertificateFee record is found in RecordTemplate.kt
@@ -1567,34 +1453,6 @@ internal fun readSequenceUInt(buf: ByteBuffer): List<UInt> {
 }
 
 
-// Helper functions for passing values of type List<Fragment>
-internal fun lowerSequenceObjectFragment(v: List<Fragment>): RustBuffer.ByValue {
-    return lowerIntoRustBuffer(v) { v, buf ->
-        writeSequenceObjectFragment(v, buf)
-    }
-}
-
-internal fun writeSequenceObjectFragment(v: List<Fragment>, buf: RustBufferBuilder) {
-    buf.putInt(v.size)
-    v.forEach {
-        it.write(buf)
-    }
-}
-
-internal fun liftSequenceObjectFragment(rbuf: RustBuffer.ByValue): List<Fragment> {
-    return liftFromRustBuffer(rbuf) { buf ->
-        readSequenceObjectFragment(buf)
-    }
-}
-
-internal fun readSequenceObjectFragment(buf: ByteBuffer): List<Fragment> {
-    val len = buf.getInt()
-    return List<Fragment>(len) {
-        Fragment.read(buf)
-    }
-}
-
-
 // Helper functions for passing values of type List<SecretKeyEd25519Extended>
 internal fun lowerSequenceObjectSecretKeyEd25519Extended(v: List<SecretKeyEd25519Extended>): RustBuffer.ByValue {
     return lowerIntoRustBuffer(v) { v, buf ->
@@ -1619,34 +1477,6 @@ internal fun readSequenceObjectSecretKeyEd25519Extended(buf: ByteBuffer): List<S
     val len = buf.getInt()
     return List<SecretKeyEd25519Extended>(len) {
         SecretKeyEd25519Extended.read(buf)
-    }
-}
-
-
-// Helper functions for passing values of type List<List<UByte>>
-internal fun lowerSequenceSequenceUByte(v: List<List<UByte>>): RustBuffer.ByValue {
-    return lowerIntoRustBuffer(v) { v, buf ->
-        writeSequenceSequenceUByte(v, buf)
-    }
-}
-
-internal fun writeSequenceSequenceUByte(v: List<List<UByte>>, buf: RustBufferBuilder) {
-    buf.putInt(v.size)
-    v.forEach {
-        writeSequenceUByte(it, buf)
-    }
-}
-
-internal fun liftSequenceSequenceUByte(rbuf: RustBuffer.ByValue): List<List<UByte>> {
-    return liftFromRustBuffer(rbuf) { buf ->
-        readSequenceSequenceUByte(buf)
-    }
-}
-
-internal fun readSequenceSequenceUByte(buf: ByteBuffer): List<List<UByte>> {
-    val len = buf.getInt()
-    return List<List<UByte>>(len) {
-        readSequenceUByte(buf)
     }
 }
 
