@@ -124,15 +124,9 @@ const tests = [
 
         const proposalPtr = await proposalNewPrivate(votePlanId, index, numChoices, VOTE_ENCRYPTION_KEY);
         const walletPtr = await walletFromFile();
-<<<<<<< HEAD
         const settingsPtr = await defaultSettings();
-        await walletSetState(walletPtr, 1000000, 1);
-        await walletVote(walletPtr, settingsPtr, proposalPtr, 0, await maxExpirationDate(settingsPtr, BLOCK0_DATE + 600));
-=======
-        const settingsPtr = await retrieveFunds(walletPtr, hexStringToBytes(BLOCK0));
         await walletSetState(walletPtr, 1000000, DEFAULT_NONCES);
         await walletVote(walletPtr, settingsPtr, proposalPtr, 0, await maxExpirationDate(settingsPtr, BLOCK0_DATE + 600), 0);
->>>>>>> e8a830b... wallet-cordova: update tests
 
         await deleteSettings(settingsPtr);
         await deleteWallet(walletPtr);
@@ -227,20 +221,13 @@ const tests = [
         const proposalPtr = await proposalNewPublic(votePlanId, index, numChoices);
         const walletPtr = await walletFromFile();
 
-<<<<<<< HEAD
         const settingsPtr = await defaultSettings();
-        await walletSetState(walletPtr, 1000000, 0);
 
-        // TODO: maybe walletVote should return an object with the both tx and the id
-        const tx1 = await walletVote(walletPtr, settingsPtr, proposalPtr, 1, await maxExpirationDate(settingsPtr, BLOCK0_DATE + 600));
-        const tx2 = await walletVote(walletPtr, settingsPtr, proposalPtr, 2, await maxExpirationDate(settingsPtr, BLOCK0_DATE + 600));
-=======
-        const settingsPtr = await retrieveFunds(walletPtr, hexStringToBytes(BLOCK0));
         await walletSetState(walletPtr, 1000000, DEFAULT_NONCES);
 
+        // TODO: maybe walletVote should return an object with the both tx and the id
         const tx1 = await walletVote(walletPtr, settingsPtr, proposalPtr, 1, await maxExpirationDate(settingsPtr, BLOCK0_DATE + 600), 0);
         const tx2 = await walletVote(walletPtr, settingsPtr, proposalPtr, 2, await maxExpirationDate(settingsPtr, BLOCK0_DATE + 600), 1);
->>>>>>> e8a830b... wallet-cordova: update tests
 
         await fragmentId(new Uint8Array(tx1));
         await fragmentId(new Uint8Array(tx2));
