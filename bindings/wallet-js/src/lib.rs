@@ -143,6 +143,7 @@ impl Wallet {
     ///   allowed in `choice`.
     /// * `choice` - the option to vote for.
     /// * `valid_until` - the date until this transaction can be applied
+    /// * `lane` - lane to use for the spending counter. Must be a number in the interval of [0, 7]
     ///
     /// # Errors
     ///
