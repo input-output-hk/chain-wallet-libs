@@ -1,5 +1,5 @@
 use crate::{Error, Result};
-use chain_core::{packer::Codec, property::DeserializeFromSlice};
+use chain_core::{packer::Codec, property::Deserialize};
 use chain_impl_mockchain::fragment::Fragment;
 use core::slice;
 
@@ -22,7 +22,7 @@ pub unsafe fn fragment_from_raw(
 
     let bytes = slice::from_raw_parts(buffer, buffer_length);
 
-    let fragment = match Fragment::deserialize_from_slice(&mut Codec::new(bytes)) {
+    let fragment = match Fragment::deserialize(&mut Codec::new(bytes)) {
         Ok(fragment) => fragment,
         Err(_e) => return Error::invalid_fragment().into(),
     };

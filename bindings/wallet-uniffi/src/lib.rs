@@ -5,10 +5,7 @@ use chain_impl_mockchain::certificate::VotePlanId;
 use chain_impl_mockchain::config;
 use chain_impl_mockchain::fee;
 use chain_impl_mockchain::fragment;
-use chain_ser::{
-    deser::{DeserializeFromSlice, Serialize},
-    packer::Codec,
-};
+use chain_ser::{deser::Serialize, packer::Codec};
 use chain_vote::ElectionPublicKey;
 use std::convert::{TryFrom, TryInto};
 use std::num::NonZeroU64;

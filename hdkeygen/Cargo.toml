@@ -15,9 +15,9 @@ chain-path-derivation = { path = "../chain-path-derivation" }
 hex = "0.4.2"
 zeroize = "1.5.3"
 
-chain-crypto = { git = "https://github.com/input-output-hk/chain-libs.git", branch = "master" }
-chain-addr = { git = "https://github.com/input-output-hk/chain-libs.git", branch = "master" }
-cardano-legacy-address = { git = "https://github.com/input-output-hk/chain-libs.git", branch = "master" }
+chain-crypto = { git = "https://github.com/input-output-hk/chain-libs.git", branch = "catalyst-fund8" }
+chain-addr = { git = "https://github.com/input-output-hk/chain-libs.git", branch = "catalyst-fund8" }
+cardano-legacy-address = { git = "https://github.com/input-output-hk/chain-libs.git", branch = "catalyst-fund8" }
 
 [dev-dependencies]
 quickcheck = "0.9"
