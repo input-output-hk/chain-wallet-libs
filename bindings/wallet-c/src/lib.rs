@@ -526,7 +526,7 @@ pub unsafe extern "C" fn iohk_jormungandr_wallet_delete_buffer(ptr: *mut u8, len
 /// in or you may see unexpected behaviors
 ///
 #[no_mangle]
-pub extern "C" fn iohk_jormungandr_wallet_delete_error(error: ErrorPtr) {
+pub unsafe extern "C" fn iohk_jormungandr_wallet_delete_error(error: ErrorPtr) {
     wallet_delete_error(error as *mut ErrorRust)
 }
 
@@ -539,7 +539,7 @@ pub extern "C" fn iohk_jormungandr_wallet_delete_error(error: ErrorPtr) {
 /// in or you may see unexpected behaviors
 ///
 #[no_mangle]
-pub extern "C" fn iohk_jormungandr_wallet_delete_settings(settings: SettingsPtr) {
+pub unsafe extern "C" fn iohk_jormungandr_wallet_delete_settings(settings: SettingsPtr) {
     wallet_delete_settings(settings as *mut SettingsRust)
 }
 
@@ -552,7 +552,7 @@ pub extern "C" fn iohk_jormungandr_wallet_delete_settings(settings: SettingsPtr)
 /// in or you may see unexpected behaviors
 ///
 #[no_mangle]
-pub extern "C" fn iohk_jormungandr_wallet_delete_wallet(wallet: WalletPtr) {
+pub unsafe extern "C" fn iohk_jormungandr_wallet_delete_wallet(wallet: WalletPtr) {
     wallet_delete_wallet(wallet as *mut WalletRust)
 }
 
@@ -565,7 +565,7 @@ pub extern "C" fn iohk_jormungandr_wallet_delete_wallet(wallet: WalletPtr) {
 /// in or you may see unexpected behaviors
 ///
 #[no_mangle]
-pub extern "C" fn iohk_jormungandr_wallet_delete_proposal(proposal: ProposalPtr) {
+pub unsafe extern "C" fn iohk_jormungandr_wallet_delete_proposal(proposal: ProposalPtr) {
     wallet_delete_proposal(proposal as *mut ProposalRust)
 }
 
