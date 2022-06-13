@@ -16,6 +16,9 @@ from copy_jni_definitions import run as copy_jni_definitions
 from build_ios import run as build_ios
 from directories import repository_directory, plugin_directory, tests_directory
 
+sys.path.append(str(repository_directory / "test-vectors"))
+from rebuild_genesis_data import run as rebuild_genesis_data
+
 
 def sed(original: str, replacement: str, file: Path):
     # TODO: this may have some problems, but I'm also not sure if I want to use
@@ -107,6 +110,10 @@ def install_main_plugin(
 
 def install_test_plugin(app_dir: Path, reinstall=True):
     subprocess.check_call(["npm", "install"], cwd=tests_directory)
+
+    # make sure the genesis is up-to-date
+    rebuild_genesis_data()
+
     subprocess.check_call(["npm", "run", "build"], cwd=tests_directory)
 
     if reinstall:
