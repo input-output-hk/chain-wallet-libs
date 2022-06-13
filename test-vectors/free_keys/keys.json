@@ -12,16 +12,4 @@
         "public_key": "ed25519_pk1563uq3r6awwv2n8kgg46x2effe0pc0hk67p09t8lffcxjnzdze3s9pc5aa",
         "account_id": "a6a3c0447aeb9cc54cf6422ba32b294e5e1c3ef6d782f2acff4a70694c4d1663"
     },
-    "utxo_keys": [
-        {
-            "address": "ca1qvhujnjpdjwtnvlha2ves34v6v07gekqjtsupk9kvdq8fhhcl8s7sl632wq",
-            "private_key": "301559ccb2d4cc7e9e54a6f55a80960bb691b7b1409549ef8695a92ea41a6f4f405231a806c2e7b9d0db30e15ee0cc1f261c1b9f9615636b48bd89fe7be6ea1f",
-            "public_key": "ed25519_pk19ly5ustvnjum8al2nxvydtxnrljxdsyju8qd3dnrgp6da78eu85qf9036s"
-        },
-        {
-            "address": "ca1qvcq2yckqtjzggl3vcsmhessp0a85xnf4mjl6cgcm3vglehj4zhhccpplcd",
-            "private_key": "a8b6bdf080c74fbc31337ede4b6692c2ebed7e34af6d98b7bbcd478cf07b0d5ed93f7e9d4aa3afde321ae1abb61b8344c243c9d0b407cbf8917db6df2c653dea",
-            "public_key": "ed25519_pk1xqz3x9szusjz8utxyxa7vyqtlfap56dwuh7kzxxutz87du4g4a7qr8tg6x"
-        }
-    ]
-}
+

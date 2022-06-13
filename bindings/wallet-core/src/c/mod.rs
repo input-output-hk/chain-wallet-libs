@@ -61,22 +61,13 @@ pub const NONCES_SIZE: usize = 8 * 4;
 ///
 /// * the `wallet_out` is null pointer
 ///
-pub unsafe fn wallet_import_keys(
-    account_key: *const u8,
-    utxo_keys: *const [u8; 64],
-    utxo_keys_len: usize,
-    wallet_out: *mut WalletPtr,
-) -> Result {
+pub unsafe fn wallet_import_keys(account_key: *const u8, wallet_out: *mut WalletPtr) -> Result {
     let wallet_out = non_null_mut!(wallet_out);
-    let utxo_keys: &[u8; 64] = non_null!(utxo_keys);
-
     let account_key: &u8 = non_null!(account_key);
+
     let account_key: &[u8] = std::slice::from_raw_parts(account_key as *const u8, 64);
 
-    let utxo_keys: &[[u8; 64]] =
-        std::slice::from_raw_parts(utxo_keys.as_ptr() as *const [u8; 64], utxo_keys_len);
-
-    let result = Wallet::recover_free_keys(account_key, utxo_keys.iter());
+    let result = Wallet::recover_free_keys(account_key);
 
     match result {
         Ok(wallet) => {

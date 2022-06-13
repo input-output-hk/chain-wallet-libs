@@ -70,16 +70,9 @@ pub type EncryptingVoteKeyPtr = *mut EncryptingVoteKey;
 #[no_mangle]
 pub unsafe extern "C" fn iohk_jormungandr_wallet_import_keys(
     account_key: *const u8,
-    utxo_keys: *const u8,
-    utxo_keys_len: usize,
     wallet_out: *mut WalletPtr,
 ) -> ErrorPtr {
-    let r = wallet_import_keys(
-        account_key,
-        utxo_keys as *const [u8; 64],
-        utxo_keys_len,
-        wallet_out as *mut *mut WalletRust,
-    );
+    let r = wallet_import_keys(account_key, wallet_out as *mut *mut WalletRust);
 
     r.into_c_api() as ErrorPtr
 }

@@ -106,7 +106,7 @@ var plugin = {
 
     /**
      * @param {Uint8Array} accountKeys a 64bytes array representing an Ed25519Extended private key
-     * @param {Uint8Array} utxoKeys a contiguous array of Ed25519Extended private keys (64 bytes each)
+     * @param {Uint8Array} [DEPRECATED] utxoKeys a contiguous array of Ed25519Extended private keys (64 bytes each)
      * @param {pointerCallback} successCallback on success returns a pointer to a Wallet object
      * @param {errorCallback} errorCallback if the input arrays are malformed
      */
