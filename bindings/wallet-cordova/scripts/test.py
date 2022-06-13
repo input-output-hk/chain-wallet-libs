@@ -86,7 +86,7 @@ def install_main_plugin(
     app_dir: Path, reinstall=True, android=False, ios=False, cargo_build=True
 ):
     if reinstall:
-        subprocess.check_call(
+        subprocess.call(
             ["cordova", "plugin", "rm", "wallet-cordova-plugin"], cwd=app_dir
         )
 
@@ -110,7 +110,7 @@ def install_test_plugin(app_dir: Path, reinstall=True):
     subprocess.check_call(["npm", "run", "build"], cwd=tests_directory)
 
     if reinstall:
-        subprocess.check_call(
+        subprocess.call(
             ["cordova", "plugin", "rm", "wallet-cordova-plugin-tests"], cwd=app_dir
         )
 
