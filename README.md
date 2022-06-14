@@ -40,7 +40,6 @@ This includes bindings for Android Kotlin already packaged in a AAR package.
 | -------- | :-------: |
 | android  |     ✓     |
 | ios      |     ✓     |
-| electron |     ✓     |
 
 ### iOS
 
