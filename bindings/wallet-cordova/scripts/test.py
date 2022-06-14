@@ -108,11 +108,12 @@ def install_main_plugin(
     )
 
 
-def install_test_plugin(app_dir: Path, reinstall=True):
+def install_test_plugin(app_dir: Path, reinstall=True, regen_vectors=True):
     subprocess.check_call(["npm", "install"], cwd=tests_directory)
 
-    # make sure the genesis is up-to-date
-    rebuild_genesis_data()
+    if regen_vectors:
+        # make sure the genesis is up-to-date
+        rebuild_genesis_data()
 
     subprocess.check_call(["npm", "run", "build"], cwd=tests_directory)
 
@@ -140,6 +141,14 @@ if __name__ == "__main__":
 
     parser.add_argument("--cargo-build", dest="cargo_build", action="store_true")
     parser.add_argument("--no-cargo-build", dest="cargo_build", action="store_false")
+
+    parser.add_argument(
+        "--regen-test-vectors", dest="regen_test_vectors", action="store_true"
+    )
+    parser.add_argument(
+        "--no-regen-test-vectors", dest="regen_test_vectors", action="store_false"
+    )
+
     parser.set_defaults(feature=True)
 
     args = parser.parse_args()
@@ -163,13 +172,17 @@ if __name__ == "__main__":
             ios=ios,
             cargo_build=args.cargo_build,
         )
-        install_test_plugin(app_dir, reinstall=False)
+        install_test_plugin(
+            app_dir, reinstall=False, regen_vectors=args.regen_test_vectors
+        )
 
     if args.command == "reload-plugin":
         install_main_plugin(app_dir, reinstall=True, android=android, ios=ios)
 
     if args.command == "reload-tests":
-        install_test_plugin(app_dir, reinstall=True)
+        install_test_plugin(
+            app_dir, reinstall=True, regen_vectors=args.regen_test_vectors
+        )
 
     if ios:
         subprocess.check_call(
