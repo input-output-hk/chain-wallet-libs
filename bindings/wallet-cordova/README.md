@@ -38,6 +38,14 @@ for requirements specific to the platform you are going to be developing for.
 [https://github.com/cross-rs/cross](cross) is currently used for building the
 native libraries for Android.
 
+#### iOS
+
+[https://github.com/eqrion/cbindgen](cbindgen) is necessary for generating the c
+header, which is then used from the Objetive C in this package. This is only
+needed if the core API changes. The
+[../bindings/wallet-c/regen_header.sh](regen_header.sh) script can be used to do
+this.
+
 #### JCLI
 
 Additionally, jcli is required to generate the genesis file that it is used in
