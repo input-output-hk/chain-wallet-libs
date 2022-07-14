@@ -248,7 +248,7 @@ const tests = [
 
         const block0Date = "110";
         const slotDuration = "10";
-        const era = {epochStart: "0", slotStart: "0", slotsPerEpoch: "100"};
+        const era = { epochStart: "0", slotStart: "0", slotsPerEpoch: "100" };
         const transactionMaxExpiryEpochs = "2";
 
         const settingsPtr = await settingsNew(settingsExpected.block0Hash,
@@ -303,6 +303,10 @@ const tests = [
         expect(uint8ArrayEquals(id1, pendingTransactions[0])).toBe(true);
         expect(uint8ArrayEquals(id2, pendingTransactions[0])).toBe(true);
 
+        alert(new Uint8Array(tx1));
+        alert(new Uint8Array(id1));
+
+
         await deleteSettings(settingsPtr);
         await deleteWallet(walletPtr);
         await deleteProposal(proposalPtr);
@@ -348,6 +352,7 @@ exports.defineAutoTests = function () {
 
 exports.defineManualTests = require('./src/manual_tests.js');
 
+<<<<<<< HEAD
 function conversionGetTransactions(conversion) {
     return new Promise(function (resolve, reject) {
         primitives.conversionTransactionsSize(conversion, function (size) {
@@ -366,6 +371,32 @@ function conversionGetTransactions(conversion) {
             reject(err);
         });
     }
+=======
+async function defaultSettings() {
+    const testSettings = {
+        block0Hash: hexStringToBytes(BLOCK0_ID),
+        discrimination: primitives.Discrimination.TEST,
+        fees: {
+            constant: "1",
+            coefficient: "2",
+            certificate: "3",
+            certificatePoolRegistration: "4",
+            certificateStakeDelegation: "5",
+            certificateOwnerStakeDelegation: "6",
+            certificateVotePlan: "7",
+            certificateVoteCast: "8",
+        }
+    };
+
+    const block0Date = JSON.stringify(BLOCK0_DATE);
+    const slotDuration = JSON.stringify(SLOT_DURATION);
+    const era = { epochStart: "0", slotStart: "0", slotsPerEpoch: JSON.stringify(SLOTS_PER_EPOCH) };
+    const transactionMaxExpiryEpochs = "2";
+
+    const settingsPtr = await settingsNew(testSettings.block0Hash,
+        testSettings.discrimination, testSettings.fees, block0Date,
+        slotDuration, era, transactionMaxExpiryEpochs
+>>>>>>> dbe7efd (print id and tx btes)
     );
 }
 
